@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-
 function inArray() {
     local needle="${1}"; shift
     local haystack="${@}"
@@ -12,6 +11,23 @@ function inArray() {
     done
 
     return 1;
+}
+
+# joinBy ,      a b c #a,b,c
+# joinBy ' , '  a b c #a , b , c
+# joinBy ')|('  a b c #a)|(b)|(c
+# joinBy ' %s ' a b c #a %s b %s c
+# joinBy $'\n'  a b c #a<newline>b<newline>c
+# joinBy -      a b c #a-b-c
+# joinBy '\'    a b c #a\b\c
+function joinBy {
+    local d=$1;
+    shift;
+
+    echo -n "$1";
+    shift;
+
+    printf "%s" "${@/#/$d}";
 }
 
 declare -a testArr=('aaa', 'bbb', 'ccc')
