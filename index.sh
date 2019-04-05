@@ -4,6 +4,8 @@
 # TODO: versions
 # TODO: bundling via Travis CI
 
-source array.sh
-source ./bash.sh
-source ./git.sh
+declare -r SCRIPT_PATH="$( cd "$(dirname "$0")" ; pwd -P )"
+
+source "${SCRIPT_PATH}/array.sh"
+source "${SCRIPT_PATH}/bash.sh"
+source "${SCRIPT_PATH}/git.sh"
