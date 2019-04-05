@@ -4,8 +4,9 @@
 # TODO: versions
 # TODO: bundling via Travis CI
 
-declare -r SCRIPT_PATH="$( cd "$(dirname "$0")" ; pwd -P )"
+declare -r AK_SCRIPT_PATH="$( cd "$(dirname "$0")" ; pwd -P )"
 
-source "${SCRIPT_PATH}/array.sh"
-source "${SCRIPT_PATH}/bash.sh"
-source "${SCRIPT_PATH}/git.sh"
+source "${AK_SCRIPT_PATH}/config.sh"
+source "${AK_SCRIPT_PATH}/lib/array.sh"
+source "${AK_SCRIPT_PATH}/lib/bash.sh"
+source "${AK_SCRIPT_PATH}/lib/git.sh"
