@@ -29,13 +29,3 @@ function ak::array:joinBy {
 
     printf "%s" "${@/#/$d}";
 }
-
-declare -a testArr=('aaa', 'bbb', 'ccc')
-
-if inArray 'bbb' "${testArr[@]}"; then
-    echo 'Has "bbb"'
-fi
-
-if ! inArray 'ddd' "${testArr[@]}"; then
-    echo 'Does not have "ddd"'
-fi
