@@ -8,7 +8,7 @@
 #     exit 1
 #   fi
 #
-function checkBashVersion() {
+function bash::checkBashVersion() {
     local -r MAJOR="${1:-0}"
     local -r MINOR="${2:-0}"
     local -r FIX="${3:-0}"
@@ -28,3 +28,5 @@ function checkBashVersion() {
        return 1
     fi
 }
+
+# TODO: implement bash::commandExists()

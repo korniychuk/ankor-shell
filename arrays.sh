@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-function inArray() {
+function array::inArray() {
     local needle="${1}"; shift
     local haystack="${@}"
 
     for haystack; do
-        if [ "$haystack" == "$needle" ]; then
+        if [[ "$haystack" == "$needle" ]]; then
             return 0;
         fi
     done
@@ -20,7 +20,7 @@ function inArray() {
 # joinBy $'\n'  a b c #a<newline>b<newline>c
 # joinBy -      a b c #a-b-c
 # joinBy '\'    a b c #a\b\c
-function joinBy {
+function array::joinBy {
     local d=$1;
     shift;
 
