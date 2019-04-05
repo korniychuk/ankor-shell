@@ -121,3 +121,37 @@ function ak.git.auth() {
 
   return 0
 }
+
+#
+# Shows current branch name
+#
+function ak.git.branch() {
+  git rev-parse --abbrev-ref HEAD
+}
+
+#
+# Shows hash of the current HEAD
+#
+function ak.git.hash() {
+  git rev-parse HEAD
+}
+
+#
+# Shows short hash of the current HEAD
+#
+function ak.git.hash-short() {
+  git rev-parse --short HEAD
+}
+
+function ak.git.log() {
+  local -r count="${1:-25}"
+
+  git \
+    --no-pager \
+    log \
+      --pretty=format:"%h | %ad | %<(20)%an | %s" \
+      --graph \
+      --date=format:'%Y-%m-%d %H:%M:%S' \
+      --max-count="${count}" \
+    | cut -c 1-140
+}
