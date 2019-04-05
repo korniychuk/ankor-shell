@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-function git::replaceCommitsAuthorOrCommitter() {
+function ak::git:replaceCommitsAuthorOrCommitter() {
     local -r oldEmail="${1}"
     local -r correctName="${2}"
     local -r correctEmail="${3}"
@@ -18,7 +18,7 @@ function git::replaceCommitsAuthorOrCommitter() {
         return 1
     fi
 
-    git filter-branch -f --env-filter "
+    return git filter-branch -f --env-filter "
     if [ \"\$GIT_COMMITTER_EMAIL\" = \"${oldEmail}\" ]
     then
         export GIT_COMMITTER_NAME=\"${correctName}\"
@@ -31,20 +31,3 @@ function git::replaceCommitsAuthorOrCommitter() {
     fi
     " --tag-name-filter cat -- --branches --tags
 }
-
-#git filter-branch -f --env-filter '
-#OLD_EMAIL="dev@korniychuk.pro"
-#CORRECT_NAME="Anton Korniychuk"
-#CORRECT_EMAIL="dev@korniychuk.pro"
-#
-#if [ "$GIT_COMMITTER_EMAIL" = "$OLD_EMAIL" ]
-#then
-#    export GIT_COMMITTER_NAME="$CORRECT_NAME"
-#    export GIT_COMMITTER_EMAIL="$CORRECT_EMAIL"
-#fi
-#if [ "$GIT_AUTHOR_EMAIL" = "$OLD_EMAIL" ]
-#then
-#    export GIT_AUTHOR_NAME="$CORRECT_NAME"
-#    export GIT_AUTHOR_EMAIL="$CORRECT_EMAIL"
-#fi
-#' --tag-name-filter cat -- --branches --tags
