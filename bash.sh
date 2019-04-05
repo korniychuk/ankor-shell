@@ -8,7 +8,7 @@
 #     exit 1
 #   fi
 #
-function ak::bash:checkBashVersion() {
+function ak.bash.checkBashVersion() {
     local -r MAJOR="${1:-0}"
     local -r MINOR="${2:-0}"
     local -r FIX="${3:-0}"
@@ -29,4 +29,4 @@ function ak::bash:checkBashVersion() {
     fi
 }
 
-# TODO: implement bash::commandExists()
+# TODO: implement ak.bash.commandExists()

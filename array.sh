@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-function ak::array:inArray() {
+function ak.array.inArray() {
     local needle="${1}"; shift
     local haystack="${@}"
 
@@ -20,7 +20,7 @@ function ak::array:inArray() {
 # joinBy $'\n'  a b c #a<newline>b<newline>c
 # joinBy -      a b c #a-b-c
 # joinBy '\'    a b c #a\b\c
-function ak::array:joinBy {
+function ak.array.joinBy {
     local d=$1;
     shift;
 
