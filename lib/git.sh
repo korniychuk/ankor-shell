@@ -130,6 +130,13 @@ function ak.git.branch() {
 }
 
 #
+# Shows current branch name
+#
+function ak.git.tag() {
+  git describe --exact-match --tags $(git log -n1 --pretty='%h')
+}
+
+#
 # Shows hash of the current HEAD
 #
 function ak.git.hash() {
