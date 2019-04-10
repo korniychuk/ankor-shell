@@ -72,6 +72,8 @@ function ak.git.replaceCommitsAuthorOrCommitterUsingGlobal() {
 # 4. Update global info
 #   ak.git.auth g 'user name' 'user email'
 #
+# TODO: Implement better params parsing
+#
 function ak.git.auth() {
   if [[ ${#} -eq 1 ]] || [[ ${#} -ge 3 ]]; then
     local -r level="${1:-l}"; shift
@@ -109,8 +111,8 @@ function ak.git.auth() {
       return 1
     fi
 
-    eval ${baseCommand} user.name "${userName}"
-    eval ${baseCommand} user.email "${userEmail}"
+    eval "${baseCommand}" user.name "'${userName}'"
+    eval "${baseCommand}" user.email "'${userEmail}'"
   else
     local -r updateInfo=''
   fi
