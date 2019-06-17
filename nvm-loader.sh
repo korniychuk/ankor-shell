@@ -6,24 +6,26 @@
 #[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 #[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
-export _NVM_LOADED=0
-function _nvm() {
-  local Style_Off='\033[0m'              # Text Reset
-  local Style_Bold='\033[1m'
-  local Style_Bold_Red='\033[1;31m'
-  local Style_Bold_Green='\033[1;32m'
-  local Prev_Line='\e[1A'
 
-  if [[ "$_NVM_LOADED" == "0" ]]; then
-    export _NVM_LOADED=1
+export _isNvmLoaded=0
+function _ak.loadNvm() {
+  local style_Off='\033[0m'              # Text Reset
+  local style_Bold='\033[1m'
+  local style_BoldRed='\033[1;31m'
+  local style_BoldGreen='\033[1;32m'
+  local cursorToPreviousLine='\e[1A'
+  local nvmMsgPrefix='NVM Loader:'
 
-    local COMMAND="$1"; shift
+  if [[ "$_isNvmLoaded" == "0" ]]; then
+    export _isNvmLoaded=1
+
+    local command="$1"; shift
     unset -f nvm node npm npx ng
 
-    if [[ "${COMMAND}" == "automatically" ]]; then
-      echo 'NVM Loader: .nvmrc found --> Loading NVM ...'
+    if [[ "${command}" == "automatically" ]]; then
+      echo "${nvmMsgPrefix} .nvmrc found --> Loading NVM ..."
     else
-      echo 'NVM Loader: Loading ...'
+      echo "${nvmMsgPrefix} Loading ..."
     fi
 
     # This dir will contains node.js installations
@@ -32,45 +34,45 @@ function _nvm() {
       mkdir "$NVM_DIR"
     fi
 
-    local NVM_SH_DIR="$(realpath -e $(brew --prefix nvm))"
-    local NVM_SH_LOADER="${NVM_SH_DIR}/nvm.sh"
-    local NVM_SH_COMPLETION="${NVM_SH_DIR}/etc/bash_completion.d/nvm"
-    [[ -s "$NVM_SH_LOADER" ]]     && source "$NVM_SH_LOADER"
-    [[ -s "$NVM_SH_COMPLETION" ]] && source "$NVM_SH_COMPLETION"
+    local nvmShDir="$(realpath -e $(brew --prefix nvm))"
+    local nvmShLoader="${nvmShDir}/nvm.sh"
+    local nvmShCompletion="${nvmShDir}/etc/bash_completion.d/nvm"
+    [[ -s "$nvmShLoader" ]]     && source "$nvmShLoader"
+    [[ -s "$nvmShCompletion" ]] && source "$nvmShCompletion"
 
     # load .nvmrc from the current working directory in case it exists
-    local NVMRC_INFO='Default'
+    local nvmRcInfo='Default'
     if [[ -f "$PWD/.nvmrc" ]]; then
       nvm use > /dev/null
-      NVMRC_INFO='From .nvmrc'
+      nvmRcInfo='From .nvmrc'
     fi
 
     if [[ ! -f "$(which node)" ]]; then
-      echo -e "NVM Loader: ${Style_Bold_Red}Can not load NodeJS${Style_Off}" >&2
+      echo -e "${nvmMsgPrefix} ${style_BoldRed}Can not load NodeJS${style_Off}" >&2
       return 1
     fi
 
-    echo -e "\r${Prev_Line}NVM Loader: ${Style_Bold_Green}Loaded${Style_Off} --> " \
-      "node: ${Style_Bold}$(node --version)${Style_Off} (${NVMRC_INFO})   " \
-      "npm: ${Style_Bold}$(npm --version)${Style_Off}   " \
-      "nvm: ${Style_Bold}$(nvm --version)${Style_Off}"
+    echo -e "\r${cursorToPreviousLine}${nvmMsgPrefix} ${style_BoldGreen}Loaded${style_Off} --> " \
+      "node: ${style_Bold}$(node --version)${style_Off} (${nvmRcInfo})   " \
+      "npm: ${style_Bold}$(npm --version)${style_Off}   " \
+      "nvm: ${style_Bold}$(nvm --version)${style_Off}"
 #      "\n"
 
     # execute only in case at least one argument passed
     if [[ "${1}" != "" ]]; then
-      "${COMMAND}" "$@"
+      "${command}" "$@"
     fi
   fi
 }
 
-function nvm()  { _nvm nvm  "$@" }
-function node() { _nvm node "$@" }
-function npm()  { _nvm npm  "$@" }
-function npx()  { _nvm npm  "$@" }
-function ng()   { _nvm ng   "$@" }
-function yarn() { _nvm yarn "$@" }
+function nvm()  { _ak.loadNvm nvm  "$@" }
+function node() { _ak.loadNvm node "$@" }
+function npm()  { _ak.loadNvm npm  "$@" }
+function npx()  { _ak.loadNvm npx  "$@" }
+function ng()   { _ak.loadNvm ng   "$@" }
+function yarn() { _ak.loadNvm yarn "$@" }
 
 # automatically loading nvm on SHELL open in case .nvmrc found
 if [[ -f "$PWD/.nvmrc" ]]; then
-  _nvm 'automatically'
+  _ak.loadNvm 'automatically'
 fi
