@@ -14,7 +14,7 @@ function _ak.nvm.load() {
     export __ak_nvm_isLoaded=1
 
     local command="$1"; shift
-    unset -f nvm node npm npx ng
+    unset -f nvm node npm npx ng yarn
 
     if [[ "${command}" == "automatically" ]]; then
       echo "${__ak_nvm_msgPrefix} .nvmrc found --> Loading NVM ..."
