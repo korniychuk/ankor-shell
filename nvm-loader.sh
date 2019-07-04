@@ -82,8 +82,10 @@ function ak.nvm.version() {
     echo -en "node: ${style_Bold}$(node --version)${style_Off}${nvmRcInfo}"
     echo -en "   npm: ${style_Bold}$(npm --version)${style_Off}"
     echo -en "   nvm: ${style_Bold}$(nvm --version)${style_Off}"
-    if [[ "$(which yarn)" != "" ]]; then
+    if [[ -f "$(which yarn)" ]]; then
       echo -en "   yarn: ${style_Bold}$(yarn --version)${style_Off}"
+    else
+      echo -en "   yarn: ${style_BoldRed}NO${style_Off}"
     fi
     echo
   else
