@@ -78,10 +78,14 @@ function ak.nvm.version() {
   fi
 
   if [[ -f "$(which node)" ]]; then
-    echo -e "\r${cursorToPreviousLine}${__ak_nvm_msgPrefix} ${style_BoldGreen}Loaded${style_Off} --> " \
-      "node: ${style_Bold}$(node --version)${style_Off}${nvmRcInfo}   " \
-      "npm: ${style_Bold}$(npm --version)${style_Off}   " \
-      "nvm: ${style_Bold}$(nvm --version)${style_Off}"
+    echo -en "\r${cursorToPreviousLine}${__ak_nvm_msgPrefix} ${style_BoldGreen}Loaded${style_Off} --> "
+    echo -en "node: ${style_Bold}$(node --version)${style_Off}${nvmRcInfo}"
+    echo -en "   npm: ${style_Bold}$(npm --version)${style_Off}"
+    echo -en "   nvm: ${style_Bold}$(nvm --version)${style_Off}"
+    if [[ "$(which yarn)" != "" ]]; then
+      echo -en "   yarn: ${style_Bold}$(yarn --version)${style_Off}"
+    fi
+    echo
   else
     echo -e "${__ak_nvm_msgPrefix} ${style_BoldRed}Can not load NodeJS${style_Off}" >&2
   fi
