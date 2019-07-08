@@ -17,4 +17,5 @@ Add this lines to your `~/.bashrc` / `~/.zshrc` configs
 source /code/ankor-bash/index.sh
 source /code/ankor-bash/disk-aliases.sh
 source /code/ankor-bash/nvm-loader.sh
+source /code/ankor-bash/custom-scripts.sh
 ```

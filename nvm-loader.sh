@@ -9,7 +9,7 @@
 
 export __ak_nvm_isLoaded=0
 export __ak_nvm_msgPrefix='NVM Loader:'
-function _ak.nvm.load() {
+function __ak.nvm.load() {
   if [[ "$__ak_nvm_isLoaded" == "0" ]]; then
     export __ak_nvm_isLoaded=1
 
@@ -42,7 +42,7 @@ function _ak.nvm.load() {
       ak.nvm.version 0
     fi
 
-    if [[ ! -f "$(which node)" ]]; then
+    if ! ak.bash.commandExists node; then
       return 1
     fi
 
@@ -54,9 +54,9 @@ function _ak.nvm.load() {
 }
 
 # automatically loading nvm on SHELL open in case .nvmrc found
-function _ak.nvm.autoloadNvmRc() {
+function __ak.nvm.autoloadNvmRc() {
   if [[ -f "$PWD/.nvmrc" ]]; then
-    _ak.nvm.load 'automatically'
+    __ak.nvm.load 'automatically'
   fi
 }
 
@@ -77,27 +77,27 @@ function ak.nvm.version() {
     nvmRcInfo=' (Default)'
   fi
 
-  if [[ -f "$(which node)" ]]; then
+  if ak.bash.commandExists node; then
     echo -en "\r${cursorToPreviousLine}${__ak_nvm_msgPrefix} ${style_BoldGreen}Loaded${style_Off} --> "
     echo -en "node: ${style_Bold}$(node --version)${style_Off}${nvmRcInfo}"
     echo -en "   npm: ${style_Bold}$(npm --version)${style_Off}"
     echo -en "   nvm: ${style_Bold}$(nvm --version)${style_Off}"
-    if [[ -f "$(which yarn)" ]]; then
+    if ak.bash.commandExists yarn; then
       echo -en "   yarn: ${style_Bold}$(yarn --version)${style_Off}"
     else
       echo -en "   yarn: ${style_BoldRed}NO${style_Off}"
     fi
     echo
   else
-    echo -e "${__ak_nvm_msgPrefix} ${style_BoldRed}Can not load NodeJS${style_Off}" >&2
+    echo -e "${cursorToPreviousLine}${__ak_nvm_msgPrefix} ${style_BoldRed}Can not load NodeJS${style_Off}" >&2
   fi
 }
 
-function nvm()  { _ak.nvm.load nvm  "$@" }
-function node() { _ak.nvm.load node "$@" }
-function npm()  { _ak.nvm.load npm  "$@" }
-function npx()  { _ak.nvm.load npx  "$@" }
-function ng()   { _ak.nvm.load ng   "$@" }
-function yarn() { _ak.nvm.load yarn "$@" }
+function nvm()  { __ak.nvm.load nvm  "$@" }
+function node() { __ak.nvm.load node "$@" }
+function npm()  { __ak.nvm.load npm  "$@" }
+function npx()  { __ak.nvm.load npx  "$@" }
+function ng()   { __ak.nvm.load ng   "$@" }
+function yarn() { __ak.nvm.load yarn "$@" }
 
-_ak.nvm.autoloadNvmRc
+__ak.nvm.autoloadNvmRc
