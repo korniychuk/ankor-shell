@@ -8,7 +8,7 @@
 # TODO: ak.style function to work with text color, background, bold, italic, underline, and other styles.
 #       https://stackoverflow.com/questions/5947742/how-to-change-the-output-color-of-echo-in-linux
 
-declare -r AK_SCRIPT_PATH="$( cd "$(dirname "$0")" ; pwd -P )"
+declare -r AK_SCRIPT_PATH="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
 source "${AK_SCRIPT_PATH}/config.sh"
 source "${AK_SCRIPT_PATH}/lib/array.sh"
