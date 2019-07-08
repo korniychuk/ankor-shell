@@ -127,3 +127,8 @@ fabric.properties
 # Editor-based Rest Client
 .idea/httpRequests
 
+# Project
+/custom-scripts/*
+!/custom-scripts/.gitkeep
+/.bin/*
+!/.bin/.gitkeep
