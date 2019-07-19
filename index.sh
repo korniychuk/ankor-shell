@@ -25,6 +25,7 @@
 #
 # TODO: Implement simple one-line installer
 #   Example: curl --compressed -o- -L https://yarnpkg.com/install.sh | bash
+#   May be helpful: https://github.com/gregbugaj/git-multi-repo-tooling/blob/master/Makefile
 #
 # TODO: ak.git.commit --ak-date="..." ...throw...all...git..params...to...git...
 # TODO: ak.git.redate today|yesterday|tomorrow morning|work|evening
