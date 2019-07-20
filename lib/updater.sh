@@ -3,25 +3,24 @@
 function ak.updater.update() {
   local -r updateLogPath="${AK_SCRIPT_PATH}/.last-update.log"
 
-  # TODO: omit echo
-  echo "$(date +'%Y-%m-%d %H:%M:%S')" > "${updateLogPath}"
+  ak.dt.now > "${updateLogPath}"
   echo "${AK_SCRIPT_PATH}" >> "${updateLogPath}"
   echo -e "--------------------------------------------------------------------------------" >> "${updateLogPath}"
   __ak.updater.internal 2>&1 | tee -a "${updateLogPath}"
 }
 
 function __ak.updater.internal() {
-  local currentDir="$(pwd)"
+  local -r currentDir="$(pwd)"
   cd "${AK_SCRIPT_PATH}"
 
   if ak.git.isClean; then
-      echo -e '\nRepository is clean\n'
-      git pull --no-edit origin master
+    echo -e '\nRepository is clean\n'
+    git pull --no-edit origin master
   else
-      echo -e '\nRepository is NOT clean\n'
-      git stash && \
-      git pull --no-edit origin master && \
-      git stash pop
+    echo -e '\nRepository is NOT clean\n'
+    git stash \
+      && git pull --no-edit origin master \
+      && git stash pop
   fi
 
   cd "${currentDir}"
@@ -32,8 +31,8 @@ function __ak.updater.internal() {
 function ak.updater.installCrontabJob() {
   local -r refreshPeriodHours="${1:-12}"
   if [[ "${refreshPeriodHours}" -lt 1 ]] || [[ "${refreshPeriodHours}" -gt 24 ]]; then
-      echo "Error: \$refreshPeriodHours should in range [1, 24]. Job was not installed" >&2
-      return 1
+    echo "Error: \$refreshPeriodHours should in range [1, 24]. Job was not installed" >&2
+    return 1
   fi
 
   local -r cronTmpFilePath="/tmp/__ak.updater.installCrontabJob.txt"
@@ -41,10 +40,12 @@ function ak.updater.installCrontabJob() {
   local -r cronID="AnKor Shell :: Update"
   local -r cronSchedule="0 */${refreshPeriodHours} * * *"
 
-  echo "#!/usr/bin/env bash" > "${cronUpdaterPath}"
-  echo "" >> "${cronUpdaterPath}"
-  echo "source \"${AK_SCRIPT_PATH}/index.sh\"" >> "${cronUpdaterPath}"
-  echo "ak.updater.update" >> "${cronUpdaterPath}"
+  {
+    echo "#!/usr/bin/env bash"
+    echo
+    echo "source \"${AK_SCRIPT_PATH}/index.sh\""
+    echo "ak.updater.update"
+  } > "${cronUpdaterPath}"
   chmod +x "${cronUpdaterPath}"
   echo "File '.crontab-updater.sh' refreshed."
 

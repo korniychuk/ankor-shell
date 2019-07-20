@@ -93,7 +93,7 @@ function __ak.cals.checkCommandLink() {
       echo "source \"${fileFullPath}\" \"\${@}\""
     } > "${commandFullPath}"
 
-    chmod   +x "${commandFullPath}"
+    chmod +x "${commandFullPath}"
   fi
 }
 
