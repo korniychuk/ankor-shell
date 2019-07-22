@@ -164,3 +164,24 @@ function ak.git.log() {
       --max-count="${count}" \
     | cut -c 1-140
 }
+
+function ak.git.isClean() {
+  local careAboutUnTracked="${1}"
+  if [[ "${careAboutUnTracked}" == "false" ]] \
+  || [[ "${careAboutUnTracked}" == "no" ]] \
+  || [[ "${careAboutUnTracked}" == "0" ]] \
+  || [[ "${careAboutUnTracked}" == "" ]]
+  then
+    careAboutUnTracked="no"
+  else
+    careAboutUnTracked="yes"
+  fi
+
+  if [[ -z "$(git status --untracked-files=${careAboutUnTracked} --porcelain)" ]]; then
+    # Working directory clean excluding untracked files
+    return 0;
+  else
+    # Uncommitted changes in tracked files
+    return 1;
+  fi
+}
