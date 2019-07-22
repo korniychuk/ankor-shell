@@ -7,6 +7,7 @@
 # TODO: implement function to read help from the function comment and print it by -h or --help
 # TODO: ak.style function to work with text color, background, bold, italic, underline, and other styles.
 #       https://stackoverflow.com/questions/5947742/how-to-change-the-output-color-of-echo-in-linux
+# TODO: use bash framework https://github.com/niieani/bash-oo-framework
 
 # Notes:
 #  - $BASH_SOURCE[0] used for BASH
