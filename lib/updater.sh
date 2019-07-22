@@ -15,13 +15,17 @@ function __ak.updater.internal() {
 
   if ak.git.isClean; then
       echo -e '\nRepository is clean\n'
-      git pull
+      git pull --no-edit origin master
   else
       echo -e '\nRepository is NOT clean\n'
-      git stash && git pull && git stash pop
+      git stash && \
+      git pull --no-edit origin master && \
+      git stash pop
   fi
 
   cd "${currentDir}"
+
+  echo -e "\nAnKor Bash updated."
 }
 
 function ak.updater.installCrontabJob() {
