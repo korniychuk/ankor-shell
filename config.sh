@@ -23,3 +23,7 @@ alias j='jobs -l'
 alias rr="rm -rf"
 alias e="exit"
 alias v="vim"
+
+# Inet
+alias ic="ak.inet.check; echo; ak.inet.ping.dns"
+alias ip="ak.inet.ping.ipv4"
