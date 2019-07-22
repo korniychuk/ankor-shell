@@ -128,7 +128,12 @@ fabric.properties
 .idea/httpRequests
 
 # Project
+## Custom Scripts
 /custom-scripts/*
 !/custom-scripts/.gitkeep
 /.bin/*
 !/.bin/.gitkeep
+
+## Updater
+/.last-update.log
+/.crontab-updater.sh
