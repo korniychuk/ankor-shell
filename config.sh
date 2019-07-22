@@ -25,5 +25,5 @@ alias e="exit"
 alias v="vim"
 
 # Inet
-alias ic="ak.inet.check; echo; ak.inet.ping.dns"
-alias ip="ak.inet.ping.ipv4"
+alias ic="ak.inet.check; echo; ak.inet.ping.DNS"
+alias ip="ak.inet.ping.IPv4"

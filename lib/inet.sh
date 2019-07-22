@@ -1,23 +1,35 @@
 #!/usr/bin/env bash
 
-function ak.inet.ping.ipv4() {
+function ak.inet.IPsOfHost() {
+  local -r hostName="$1"; shift
+
+  dig +short "${hostName}"
+}
+
+function ak.inet.firstIPOfHost() {
+  local -r hostName="$1"; shift
+
+  ak.inet.IPsOfHost "${hostName}" | awk '{ print ; exit }'
+}
+
+function ak.inet.ping.IPv4() {
   ping 8.8.8.8
 }
 
-function ak.inet.ping.dns() {
+function ak.inet.ping.DNS() {
   ping google.com
 }
 
 function ak.inet.check() {
   echo "Internet connection checking ..."
 
-  if ! __ak.inet.check.ipv4; then
+  if ! __ak.inet.check.IPv4; then
     echo "[Fail] IPv4"
     return 10
   fi
   echo "[OK] IPv4"
 
-  if ! __ak.inet.check.dns; then
+  if ! __ak.inet.check.DNS; then
     echo "[Fail] DNS"
     return 20
   fi
@@ -36,12 +48,12 @@ function ak.inet.check() {
   echo "[OK] Connectivity"
 }
 
-function __ak.inet.check.ipv4() {
+function __ak.inet.check.IPv4() {
   ping -q -c 1 -W 1 8.8.8.8 >/dev/null 2>/dev/null
   return $?
 }
 
-function __ak.inet.check.dns() {
+function __ak.inet.check.DNS() {
   ping -q -c 1 -W 1 google.com >/dev/null 2>/dev/null
   return $?
 }
