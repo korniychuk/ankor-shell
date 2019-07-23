@@ -3,6 +3,7 @@
 function ak.updater.update() {
   local -r updateLogPath="${AK_SCRIPT_PATH}/.last-update.log"
 
+  # TODO: omit echo
   echo "$(date +'%Y-%m-%d %H:%M:%S')" > "${updateLogPath}"
   echo "${AK_SCRIPT_PATH}" >> "${updateLogPath}"
   echo -e "--------------------------------------------------------------------------------" >> "${updateLogPath}"

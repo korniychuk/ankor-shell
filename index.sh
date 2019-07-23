@@ -29,12 +29,14 @@
 # TODO: ak.git.redate today|yesterday|tomorrow morning|work|evening
 # TODO: add convenient user management
 #
+# TODO: Implement an autoruner for local-scripts/custom-scripts/scripts
+#
 
 # Notes:
 #  - $BASH_SOURCE[0] used for BASH
 #  - $0 used for ZSH
 declare -r AK_SCRIPT_PATH=$( cd $(
-  [[ "${BASH_SOURCE[0]}" != "" ]] && dirname "$BASH_SOURCE[0]" || dirname "$0"
+  [[ "${BASH_SOURCE[0]}" != "" ]] && dirname "${BASH_SOURCE[0]}" || dirname "$0"
 ) ; pwd -P )
 
 source "${AK_SCRIPT_PATH}/config.sh"
