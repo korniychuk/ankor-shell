@@ -131,6 +131,8 @@ fabric.properties
 ## Custom Scripts
 /custom-scripts/*
 !/custom-scripts/.gitkeep
+/local-scripts/*
+!/local-scripts/.gitkeep
 /.bin/*
 !/.bin/.gitkeep
 
