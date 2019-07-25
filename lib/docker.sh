@@ -52,3 +52,27 @@ function ak.docker.network.searchIDsByPartialName() {
 
   docker network ls --no-trunc --quiet --filter=name="${name}"
 }
+
+#
+# Example:
+#
+#   if ! ak.docker.network.exists my-network_default; then
+#     echo 'ERROR! No network' >&2
+#     exit 1
+#   fi
+#
+# TODO: Check docker installed
+#
+function ak.docker.network.exists() {
+  local -r name="${1}"
+  if [[ -z "${name}" ]]; then
+    echo   "ERROR! Argument 'name' is required" >&2
+    return 2
+  fi
+
+  if [[ "$(ak.docker.network.searchIDsByPartialName "${name}")" == "" ]]; then
+    return 1
+  else
+    return 0
+  fi
+}
