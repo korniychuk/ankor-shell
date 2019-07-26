@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# todo: ak.git.push for automatic remote branch creation
+
 function ak.git.replaceCommitsAuthorOrCommitter() {
   local -r oldEmail="${1}"
   local -r correctName="${2}"
