@@ -27,6 +27,7 @@
 #
 # TODO: ak.git.commit --ak-date="..." ...throw...all...git..params...to...git...
 # TODO: ak.git.redate today|yesterday|tomorrow morning|work|evening
+# TODO: add convenient user management
 #
 
 # Notes:
