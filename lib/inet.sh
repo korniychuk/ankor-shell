@@ -1,6 +1,30 @@
 #!/usr/bin/env bash
 
 #
+# Simple HTTP Server for static files
+#
+# Examples:
+#
+#   ak.inet.serve                    # server on 127.0.0.1:8000
+#   ak.inet.serve 9000 192.168.1.2   # server on 192.168.0.1:9000
+#
+# Dependencies:
+#   - Python 3
+#
+function ak.inet.serve() {
+  local -r -i port="${1:-8000}"
+  local -r ip="${2:-127.0.0.1}"
+
+  if ! ak.bash.commandExists python3; then
+    echo "ERROR! python3 interpreter not found" >&2
+    return 1
+  fi
+
+  echo "Press Ctrl + C to stop the server.\n"
+  python3 -m http.server ${port} --bind "${ip}"
+}
+
+#
 # Show listening on the local machine ports and PIDs of processes
 # TODO: implement the way to run without sudo
 #
