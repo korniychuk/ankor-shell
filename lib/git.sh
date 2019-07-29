@@ -243,6 +243,7 @@ function ak.git.uncommit() {
 }
 
 #
+# TODO: finish it, add validation, and simplify date specification
 # Example:
 #
 #   ak.git.commit "2019-07-22 13:46:55" -m "My Commit"
