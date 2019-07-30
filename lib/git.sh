@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-# todo: ak.git.push for automatic remote branch creation
-
 function ak.git.replaceCommitsAuthorOrCommitter() {
   local -r oldEmail="${1}"
   local -r correctName="${2}"
@@ -169,10 +167,10 @@ function ak.git.log() {
 
 function ak.git.isClean() {
   local careAboutUnTracked="${1}"
-  if [[ "${careAboutUnTracked}" == "false" ]] \
-  || [[ "${careAboutUnTracked}" == "no" ]] \
-  || [[ "${careAboutUnTracked}" == "0" ]] \
-  || [[ "${careAboutUnTracked}" == "" ]]
+  if   [[ "${careAboutUnTracked}" == "false" ]] \
+    || [[ "${careAboutUnTracked}" == "no" ]] \
+    || [[ "${careAboutUnTracked}" == "0" ]] \
+    || [[ "${careAboutUnTracked}" == "" ]]
   then
     careAboutUnTracked="no"
   else
@@ -188,6 +186,22 @@ function ak.git.isClean() {
   fi
 }
 
+#
+# If remote version of the local branch exists (origin/{local-branch-name}) executes
+# 'git push "${@}"' otherwise 'git push --set-upstream origin ${branch} "${@}"'
+#
+# TODO: remove Perl dependency
+#
+# Examples:
+#
+# 1. Just push
+#   ak.git.push
+#
+# 2. Without git hooks
+#   ak.git.push --no-verify
+#
+# Helpful info: in ZSH use can type 'git.p' press TAB and it'll be transformed to 'ak.git.push'
+#
 function ak.git.push() {
   local hasOrigins=$(git status -sb | head -n 1 | grep origin | wc -l | perl -pe 's/\s//g')
 
