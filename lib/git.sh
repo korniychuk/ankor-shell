@@ -187,3 +187,20 @@ function ak.git.isClean() {
     return 1;
   fi
 }
+
+function ak.git.push() {
+  local hasOrigins=$(git status -sb | head -n 1 | grep origin | wc -l | perl -pe 's/\s//g')
+
+  if [[ "${hasOrigins}" == "1" ]]; then
+    git push "${@}"
+
+    echo "Pushed"
+    ak.bash.commandExists osascript && osascript -e 'display notification "Pushed"'
+  else
+    local branch=$(git branch --list | grep "^\* " | perl -pe 's/^\* //g')
+    git push --set-upstream origin ${branch} "${@}"
+
+    echo "Pushed with --set-upstream"
+    ak.bash.commandExists osascript && osascript -e 'display notification "Pushed with --set-upstream"'
+  fi
+}
