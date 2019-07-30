@@ -6,7 +6,6 @@
 #[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 #[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
-
 export __ak_nvm_isLoaded=0
 export __ak_nvm_msgPrefix='NVM Loader:'
 function __ak.nvm.load() {
@@ -93,11 +92,11 @@ function ak.nvm.version() {
   fi
 }
 
-function nvm()  { __ak.nvm.load nvm  "$@" }
-function node() { __ak.nvm.load node "$@" }
-function npm()  { __ak.nvm.load npm  "$@" }
-function npx()  { __ak.nvm.load npx  "$@" }
-function ng()   { __ak.nvm.load ng   "$@" }
-function yarn() { __ak.nvm.load yarn "$@" }
+function nvm()  { __ak.nvm.load nvm  "$@"; }
+function node() { __ak.nvm.load node "$@"; }
+function npm()  { __ak.nvm.load npm  "$@"; }
+function npx()  { __ak.nvm.load npx  "$@"; }
+function ng()   { __ak.nvm.load ng   "$@"; }
+function yarn() { __ak.nvm.load yarn "$@"; }
 
 __ak.nvm.autoloadNvmRc
