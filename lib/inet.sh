@@ -20,6 +20,21 @@ function ak.inet.ping.DNS() {
   ping google.com
 }
 
+#
+# Retrieves real public IPv4 using dig utility.
+# You can use the function to check VPN or Proxy privacy.
+#
+# Notice: DNS can work around your VPN
+#
+function ak.inet.publicIPv4() {
+  dig @resolver1.opendns.com ANY myip.opendns.com +short
+}
+
+#
+# Helpful links:
+# https://unix.stackexchange.com/questions/190513/shell-scripting-proper-way-to-check-for-internet-connectivity
+# https://stackoverflow.com/questions/5195607/checking-bash-exit-status-of-several-commands-efficiently
+#
 function ak.inet.check() {
   echo "Internet connection checking ..."
 
@@ -65,7 +80,3 @@ function __ak.inet.check.connectivity() {
        *) return 2;; # The network is down or very slow
   esac
 }
-
-# Helpful links
-# https://unix.stackexchange.com/questions/190513/shell-scripting-proper-way-to-check-for-internet-connectivity
-# https://stackoverflow.com/questions/5195607/checking-bash-exit-status-of-several-commands-efficiently
