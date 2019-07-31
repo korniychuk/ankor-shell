@@ -200,7 +200,7 @@ function ak.git.isClean() {
 # 2. Without git hooks
 #   ak.git.push --no-verify
 #
-# Helpful info: in ZSH use can type 'git.p' press TAB and it'll be transformed to 'ak.git.push'
+# Helpful info: in ZSH you can type 'git.p' press TAB and it'll be transformed to 'ak.git.push'
 #
 function ak.git.push() {
   local hasOrigins=$(git status -sb | head -n 1 | grep origin | wc -l | perl -pe 's/\s//g')
