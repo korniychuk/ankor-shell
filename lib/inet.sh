@@ -21,13 +21,23 @@ function ak.inet.ping.DNS() {
 }
 
 #
-# Retrieves real public IPv4 using dig utility.
+# Retrieves external(public) IPv4 using dig utility.
 # You can use the function to check VPN or Proxy privacy.
 #
 # Notice: DNS can work around your VPN
 #
-function ak.inet.publicIPv4() {
-  dig @resolver1.opendns.com ANY myip.opendns.com +short
+function ak.inet.getExternalIPv4() {
+  dig @resolver1.opendns.com A myip.opendns.com +short -4
+}
+
+#
+# Retrieves external(public) IPv6 using dig utility.
+# You can use the function to check VPN or Proxy privacy.
+#
+# Notice: DNS can work around your VPN
+#
+function ak.inet.getExternalIPv6() {
+  dig @resolver1.opendns.com AAAA myip.opendns.com +short -6
 }
 
 #

@@ -26,4 +26,4 @@ alias v="vim"
 
 # Inet
 alias ic="ak.inet.check; echo; ak.inet.ping.DNS"
-alias ip="ak.inet.publicIPv4"
+alias ip='echo -e "IPv4: $(ak.inet.getExternalIPv4)\nIPv6: $(ak.inet.getExternalIPv6)"'
