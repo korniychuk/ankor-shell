@@ -241,3 +241,16 @@ function ak.git.uncommit() {
 
   git reset --soft "HEAD~${count}"
 }
+
+#
+# Example:
+#
+#   ak.git.commit "2019-07-22 13:46:55" -m "My Commit"
+#
+function ak.git.commit() {
+  local -r date="${1}"; shift
+
+  export GIT_COMMITTER_DATE="${date}"
+  export GIT_AUTHOR_DATE="${date}"
+  git commit --date="${date}" "${@}"
+}
