@@ -47,30 +47,37 @@ function ak.inet.getExternalIPv6() {
 #
 function ak.inet.check() {
   echo "Internet connection checking ..."
+  local -i noInet=0
 
   if ! __ak.inet.check.IPv4; then
     echo "[Fail] IPv4"
-    return 10
+    noInet=1
+  else
+    echo "[OK] IPv4"
   fi
-  echo "[OK] IPv4"
 
   if ! __ak.inet.check.DNS; then
     echo "[Fail] DNS"
-    return 20
+    noInet=1
+  else
+    echo "[OK] DNS"
   fi
-  echo "[OK] DNS"
 
   __ak.inet.check.connectivity
   local -r errCode="$?"
   if [[ ${errCode} -ne 0 ]]; then
     echo -n "[Fail] Connectivity"
     case "${errCode}" in
-         1) echo " (The web proxy won't let us through)"; return 31;;
-         2) echo " (The network is down or very slow)";   return 32;;
-         *) echo " (Unknown error)";                      return 30;;
+         1) echo " (The web proxy won't let us through)";;
+         2) echo " (The network is down or very slow)";;
+         *) echo " (Unknown error)";;
     esac
+    noInet=1
+  else
+    echo "[OK] Connectivity"
   fi
-  echo "[OK] Connectivity"
+
+  return ${noInet}
 }
 
 function __ak.inet.check.IPv4() {
