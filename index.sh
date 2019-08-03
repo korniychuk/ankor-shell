@@ -42,6 +42,7 @@ source "${AK_SCRIPT_PATH}/lib/str.sh"
 source "${AK_SCRIPT_PATH}/lib/array.sh"
 
 source "${AK_SCRIPT_PATH}/lib/bash.sh"
+source "${AK_SCRIPT_PATH}/lib/gen.sh"
 source "${AK_SCRIPT_PATH}/lib/doc.sh"
 source "${AK_SCRIPT_PATH}/lib/os.sh"
 
