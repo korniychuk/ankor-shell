@@ -151,13 +151,14 @@ function __ak.dt.checkDateVendor() {
 #
 function __ak.dt.gdate() {
   __ak.dt.checkDateVendor
-  if [[ ${?} -eq 1 ]]; then
+  local -r -i res=${?}
+  if [[ ${res} -eq 1 ]]; then
       date "${@}"
-  elif [[ ${?} -eq 2 ]]; then
+  elif [[ ${res} -eq 2 ]]; then
       gdate "${@}"
   else
-      echo "ERROR! Can't find GNU Date utility"
+      echo "ERROR! Can't find GNU Date utility" >&2
   fi
 
-  return ${?}
+  return ${res}
 }
