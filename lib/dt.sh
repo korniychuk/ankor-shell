@@ -119,3 +119,7 @@ function ak.dt.getCurrentTime() {
 function ak.dt.getCurrentDateTime() {
   echo "$(ak.dt.getCurrentDate) $(ak.dt.getCurrentTime)"
 }
+
+function ak.dt.getCurrentTimeStamp() {
+  date "+%s"
+}
