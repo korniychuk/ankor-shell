@@ -1,5 +1,19 @@
 #!/usr/bin/env bash
 
+#
+# Show listening on the local machine ports and PIDs of processes
+# TODO: implement the way to run without sudo
+#
+function ak.inet.showListeningPorts() {
+    if [[ ${#} -eq 0 ]]; then
+        sudo lsof -iTCP -sTCP:LISTEN -n -P
+    elif [[ ${#} -eq 1 ]]; then
+        sudo lsof -iTCP -sTCP:LISTEN -n -P | grep -i --color $1
+    else
+        echo "Usage: listening [pattern]"
+    fi
+}
+
 function ak.inet.IPsOfHost() {
   local -r hostName="$1"; shift
 
