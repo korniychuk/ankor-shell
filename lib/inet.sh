@@ -4,6 +4,9 @@
 # Show listening on the local machine ports and PIDs of processes
 # TODO: implement the way to run without sudo
 #
+# The code is taken from this link:
+# https://stackoverflow.com/questions/4421633/who-is-listening-on-a-given-tcp-port-on-mac-os-x
+#
 function ak.inet.showListeningPorts() {
     if [[ ${#} -eq 0 ]]; then
         sudo lsof -iTCP -sTCP:LISTEN -n -P
