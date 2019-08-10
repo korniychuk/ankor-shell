@@ -1,14 +1,21 @@
 #!/usr/bin/env bash
 
 #
-# Date Time
+# Library: Date Time
 #
 
+#
 ### Variables ###
+#
+
 declare -r AK_DT_FORMAT_DATE="%Y-%m-%d"
 declare -r AK_DT_FORMAT_TIME="%H:%M:%S"
 
 declare -i __akDtGlobal_isGNUDate=-1;
+
+#
+### Functions ###
+#
 
 function ak.dt.normalizeDate() {
   local -r dateStr="${1//[.\/\\-]/-}"
@@ -99,4 +106,16 @@ function ak.dt.isDateValid() {
   fi
 
   return $?
+}
+
+function ak.dt.getCurrentDate() {
+  date "+${AK_DT_FORMAT_DATE}"
+}
+
+function ak.dt.getCurrentTime() {
+  date "+${AK_DT_FORMAT_TIME}"
+}
+
+function ak.dt.getCurrentDateTime() {
+  echo "$(ak.dt.getCurrentDate) $(ak.dt.getCurrentTime)"
 }
