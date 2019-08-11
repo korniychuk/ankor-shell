@@ -5,11 +5,20 @@
 #
 
 ### Variables ###
+declare -r AK_DT_FORMAT_DATE="%Y-%m-%d"
+declare -r AK_DT_FORMAT_TIME="%H:%M:%S"
+
 declare -i __akDtGlobal_isGNUDate=-1;
 
-#function ak.dt.normalizeDate() {
-#  echo ok
-#}
+function ak.dt.normalizeDate() {
+  local -r dateStr="${1//[.\/\\-]/-}"
+
+  if ak.dt.isDateValid "${dateStr}"; then
+      echo "Invalid date" >&2
+      return 1
+  fi
+
+}
 
 #
 # Check is GNU or Other(BSD for example) `date` util installed
@@ -56,4 +65,38 @@ function ak.dt.isGNUDatePrefixed() {
       return 0
   fi
   return 1
+}
+
+#
+# Validate date format and return 0 / 1
+#
+# Example:
+#
+#   if ak.dt.isDateValid "2019-08-23"; then
+#     echo "The date is valid"
+#   fi
+#
+# Notes:
+#   - Works with BSD(Mac OS) and GNU(Linux) date utils
+#
+# Helpful links:
+#   - https://stackoverflow.com/questions/21221562/bash-validate-date/26972354
+#   - https://stackoverflow.com/questions/18731346/validate-date-format-in-a-shell-script
+#
+function ak.dt.isDateValid() {
+  local -r dateStr="${1}"
+
+  if [[ -z "${dateStr}" ]]; then
+      return 1
+  fi
+
+  if ak.dt.isGNUDate; then
+      date "+${AK_DT_FORMAT_DATE}" -d "${dateStr}" &>/dev/null
+  elif ak.dt.isGNUDatePrefixed; then
+      gdate "+${AK_DT_FORMAT_DATE}" -d "${dateStr}" &>/dev/null
+  else
+      date -f "${AK_DT_FORMAT_DATE}" -j "${dateStr}" &>/dev/null
+  fi
+
+  return $?
 }
