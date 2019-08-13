@@ -39,10 +39,13 @@ declare -r AK_SCRIPT_PATH=$( cd $(
 
 source "${AK_SCRIPT_PATH}/config.sh"
 source "${AK_SCRIPT_PATH}/lib/str.sh"
+source "${AK_SCRIPT_PATH}/lib/array.sh"
+
+source "${AK_SCRIPT_PATH}/lib/bash.sh"
 source "${AK_SCRIPT_PATH}/lib/doc.sh"
 source "${AK_SCRIPT_PATH}/lib/os.sh"
-source "${AK_SCRIPT_PATH}/lib/array.sh"
-source "${AK_SCRIPT_PATH}/lib/bash.sh"
+
+source "${AK_SCRIPT_PATH}/lib/dt.sh"
 source "${AK_SCRIPT_PATH}/lib/git.sh"
 source "${AK_SCRIPT_PATH}/lib/inet.sh"
 source "${AK_SCRIPT_PATH}/lib/updater.sh"
