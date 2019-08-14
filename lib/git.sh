@@ -221,6 +221,21 @@ function ak.git.push() {
   fi
 }
 
+#
+# Revert N last commits(in the local history) with preserve changed files
+#
+# Examples:
+#
+# 1. Just the last commit
+#
+#   ak.git.uncommit
+#
+# 2. 3 last commits
+#
+#   ak.git.uncommit 3
+#
+# Notice: in ZSH you can type 'uncomm' and press TAB and it'll be transformed to 'ak.git.uncommit'
+#
 function ak.git.uncommit() {
   local -r count="${1:-1}"
 
