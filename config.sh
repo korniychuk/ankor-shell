@@ -23,6 +23,7 @@ alias j='jobs -l'
 alias rr="rm -rf"
 alias e="exit"
 alias v="vim"
+alias gpn="ak.git.push --no-verify"
 
 # Inet
 alias ic="ak.inet.check; echo; ak.inet.ping.DNS"
