@@ -221,11 +221,8 @@ function ak.git.push() {
   fi
 }
 
-function ak.git.commitForDate() {
-  export Y=2012
-  export M=12
-  export D=20
-  export GIT_COMMITTER_DATE="$Y-$M-$D 12:00:00"
-  export GIT_AUTHOR_DATE="$Y-$M-$D 12:00:00"
-  git commit --date="$Y-$M-$D 12:00:00" -m "Committed on $M $D $Y"
+function ak.git.uncommit() {
+  local -r count="${1:-1}"
+
+  git reset --soft "HEAD~${count}"
 }
