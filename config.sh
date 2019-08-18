@@ -25,6 +25,7 @@ alias rr="rm -rf"
 alias e="exit"
 alias v="vim"
 alias gpn="ak.git.push --no-verify"
+alias akhelp="ak.bash.showConfig"
 
 # Inet
 alias ic="ak.inet.check; echo; ak.inet.ping.DNS"

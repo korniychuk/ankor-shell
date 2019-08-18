@@ -71,3 +71,7 @@ function ak.bash.commandExists() {
 
   return 1;
 }
+
+function ak.bash.showConfig() {
+  cat "${AK_SCRIPT_PATH}/config.sh" | tail -n +3
+}
