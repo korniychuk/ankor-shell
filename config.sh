@@ -16,6 +16,7 @@ alias duof='du --max-depth=1 -h'
 alias f='find . -iname'
 alias ff='find . -type f -iname'
 alias fd='find . -type d -iname'
+alias g='grep . -ri -e'
 
 # Other
 alias hh='ak.bash.history'
