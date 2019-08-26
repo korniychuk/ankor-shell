@@ -7,9 +7,10 @@ alias ..='cd ..'
 alias ...='cd ../../'
 
 # fs info aliases
-alias l="ls -lhG"
-alias ll="ls -lhAG"
-alias l.="ls -lhAGd .*"
+alias ls="ls --color=auto"
+alias l="ls -lh"
+alias ll="ls -lhA"
+alias l.="ls -lhAd .*"
 alias duof='du --max-depth=1 -h'
 
 # Search
