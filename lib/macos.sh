@@ -8,6 +8,7 @@
 # Create separate Chrome launcher
 # https://apple.stackexchange.com/questions/66670/is-there-a-simple-way-to-have-separate-dock-icons-for-different-chrome-profiles
 # TODO: Implement plist generation
+# TODO: To lower case environment name for profile folder creation
 #
 function ak.macos.createChromeEnvironment() {
   local -r profileName="${1}"
@@ -51,6 +52,5 @@ EOF
   fi
   echo "${command}\n" >> "$F"
 
-  # TODO: try without sudo
   chmod +x "$F"
 }
