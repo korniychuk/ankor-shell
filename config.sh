@@ -7,6 +7,7 @@ alias ..='cd ..'
 alias ...='cd ../../'
 
 # fs info aliases
+# TODO: Fix unsupported --color for mac os
 alias ls="ls --color=auto"
 alias l="ls -lh"
 alias ll="ls -lhA"
