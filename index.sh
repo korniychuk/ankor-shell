@@ -9,6 +9,10 @@
 #       https://stackoverflow.com/questions/5947742/how-to-change-the-output-color-of-echo-in-linux
 # TODO: use bash framework https://github.com/niieani/bash-oo-framework
 
+# TODO: implement `const` keyword as alias for "declare -r". It defines local variables and global
+# TODO: Implement ZSH/BASH detection
+# TODO: Implement shopt for ZSH https://stackoverflow.com/questions/26616003/shopt-command-not-found-in-bashrc-after-shell-updation
+
 # Notes:
 #  - $BASH_SOURCE[0] used for BASH
 #  - $0 used for ZSH
@@ -17,6 +21,8 @@ declare -r AK_SCRIPT_PATH=$( cd $(
 ) ; pwd -P )
 
 source "${AK_SCRIPT_PATH}/config.sh"
+source "${AK_SCRIPT_PATH}/lib/str.sh"
+source "${AK_SCRIPT_PATH}/lib/doc.sh"
 source "${AK_SCRIPT_PATH}/lib/array.sh"
 source "${AK_SCRIPT_PATH}/lib/bash.sh"
 source "${AK_SCRIPT_PATH}/lib/git.sh"
