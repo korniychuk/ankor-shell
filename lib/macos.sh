@@ -71,10 +71,6 @@ function ak.macos.createChromeEnvironment() {
     echo "ERROR: Chrome instance with this name already exists. Exiting." >&2
     return 2
   fi
-#  if [[ -e "${profileDir}" ]]; then
-#    echo "ERROR: Chrome profile with this name already exists. Exiting." >&2
-#    return 3
-#  fi
   echo "    * Checking name uniqueness - OK"
 
   #
@@ -183,17 +179,22 @@ EOF
   echo "  * You can change the app icon"
   echo;
 
-  echo "3. To remove the new Chrome instance execute:"
+  echo "3. To remove the a Chrome instance (application and profile) execute:"
   echo "   $> ak.macos.removeChromeInstance '${profileName}'"
+  echo;
+  echo "   or just chrome app (without profile):"
+  echo "   $> ak.macos.removeChromeInstance '${profileName}' false"
   echo;
 
   ak.doc.headingLine "Done ;)"
 }
 
 #
+# TODO: normalize falsy value
 # Remove a separate Chrome launcher
 #
-# @param {string} profileName suffix of the new Chrome instance
+# @param {string}  profileName   suffix of the new Chrome instance
+# @param {boolean} removeProfile if 'false' profile will not be removed. Only app. Default: true
 # @returns {void}
 #
 # @example <caption>A new Chrome instance with name 'Google Chrome Research'</caption>
@@ -201,6 +202,7 @@ EOF
 #
 function ak.macos.removeChromeInstance() {
   local -r profileName="${1}"
+  local -r removeProfile="${2:-true}"
 
   if [[ -z "${profileName}" ]]; then
     echo "ERROR: Please provide the name for the new Chrome Instance" >&2
@@ -222,13 +224,15 @@ function ak.macos.removeChromeInstance() {
       echo " * Application not found at: '${customAppDir}'"
   fi
 
-  if [[ -e "${profileDir}" ]]; then
-    rm -rf "${profileDir}"
-    if [[ $? -eq 0 ]]; then
-      echo " * Profile deleted at: '${profileDir}'"
+  if [[ "${removeProfile}" == "true" ]]; then
+    if [[ -e "${profileDir}" ]]; then
+      rm -rf "${profileDir}"
+      if [[ $? -eq 0 ]]; then
+        echo " * Profile deleted at: '${profileDir}'"
+      fi
+    else
+        echo " * Profile not found at: '${profileDir}'"
     fi
-  else
-      echo " * Profile not found at: '${profileDir}'"
   fi
 
   echo;
@@ -278,7 +282,7 @@ function ak.macos.openFinderAndSelectItem() {
       echo "ERROR: The item is not exists. Can not open Finder. (${itemPath})" >&2
   fi
 
-  osascript -e "tell application \"Finder\"" -e activate -e "reveal POSIX file \"${itemPath}\"" -e end tell
+  osascript -e "tell application \"Finder\"" -e activate -e "reveal POSIX file \"${itemPath}\"" -e end tell > /dev/null
 
   return 0
 }
