@@ -7,11 +7,15 @@ alias ..='cd ..'
 alias ...='cd ../../'
 
 # fs info aliases
-# TODO: Fix unsupported --color for mac os
-alias ls="ls --color=auto"
-alias l="ls -lh"
-alias ll="ls -lhA"
-alias l.="ls -lhAd .*"
+if ls --color=auto &> /dev/null; then
+  unalias ls &> /dev/null # remove default alias
+  alias ls="ls --color=auto"
+elif gls --color=auto &> /dev/null; then # OS: Mac OS X, default ls doesn't support coloring. But GNU version available
+  alias ls="gls --color=auto"
+fi
+alias l="ls -lhF"
+alias ll="ls -lhAF"
+alias l.="ls -lhAFd .*" # shows only hidden files (started from .)
 alias duof='du --max-depth=1 -h'
 
 # Search
