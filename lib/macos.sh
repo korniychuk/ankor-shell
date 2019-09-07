@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+# TODO: Implement Notifier
+#       https://github.com/ohoachuck/notify/blob/master/notify
+#       https://stackoverflow.com/questions/48856158/change-icon-of-notification-when-using-osascript-e-display-notification/49079025#49079025
+#
+# TODO: Implement dialogs https://scriptingosx.com/2018/08/user-interaction-from-bash-scripts/
+#
+
 #
 # Mac OS X specific scripts
 #
