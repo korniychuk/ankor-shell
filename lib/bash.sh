@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO: Split bash to shell + bash/zsh
+
 #
 # TODO: Implement normalize boolean function '', 0, false, null
 #   - https://unix.stackexchange.com/questions/185670/what-is-a-best-practice-to-represent-a-boolean-value-in-a-shell-script
