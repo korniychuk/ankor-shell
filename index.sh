@@ -32,6 +32,6 @@ source "${AK_SCRIPT_PATH}/lib/inet.sh"
 source "${AK_SCRIPT_PATH}/lib/updater.sh"
 source "${AK_SCRIPT_PATH}/lib/docker.sh"
 
-# TODO: Implement os detection, and don't import this script on non-macos systems
-# https://stackoverflow.com/questions/394230/how-to-detect-the-os-from-a-bash-script
-source "${AK_SCRIPT_PATH}/lib/macos.sh"
+if ak.os.type.isMacOS; then
+  source "${AK_SCRIPT_PATH}/lib/macos.sh"
+fi
