@@ -12,6 +12,7 @@
 # TODO: implement `const` keyword as alias for "declare -r". It defines local variables and global
 # TODO: Implement ZSH/BASH detection
 # TODO: Implement shopt for ZSH https://stackoverflow.com/questions/26616003/shopt-command-not-found-in-bashrc-after-shell-updation
+# TODO: Check SH and exit
 
 # Notes:
 #  - $BASH_SOURCE[0] used for BASH
@@ -23,6 +24,7 @@ declare -r AK_SCRIPT_PATH=$( cd $(
 source "${AK_SCRIPT_PATH}/config.sh"
 source "${AK_SCRIPT_PATH}/lib/str.sh"
 source "${AK_SCRIPT_PATH}/lib/doc.sh"
+source "${AK_SCRIPT_PATH}/lib/os.sh"
 source "${AK_SCRIPT_PATH}/lib/array.sh"
 source "${AK_SCRIPT_PATH}/lib/bash.sh"
 source "${AK_SCRIPT_PATH}/lib/git.sh"
