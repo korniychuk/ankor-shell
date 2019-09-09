@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
 
+#
+# @example:
+#
+#   if [[ "$(ak.os.type)" == "MacOS" ]]; then
+#     echo "I'am Mac OS X!"
+#   fi
+#
+# Helpful links:
+#   - https://stackoverflow.com/questions/394230/how-to-detect-the-os-from-a-bash-script
+#
 function ak.os.type() {
   case "$OSTYPE" in
     bsd*)     echo "BSD" ;;
@@ -16,6 +26,13 @@ function ak.os.type.isBSD() {
   return $?
 }
 
+#
+# @example:
+#
+#   if ak.os.type.isMacOS; then
+#     echo "I'am Mac OS X!"
+#   fi
+#
 function ak.os.type.isMacOS() {
   test "$(ak.os.type)" "==" "MacOS"
   return $?
