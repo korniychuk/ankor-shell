@@ -25,7 +25,7 @@ function __ak.updater.internal() {
 
   cd "${currentDir}"
 
-  echo -e "\nAnKor Bash updated."
+  echo -e "\nAnKor Shell updated."
 }
 
 function ak.updater.installCrontabJob() {
@@ -37,7 +37,7 @@ function ak.updater.installCrontabJob() {
 
   local -r cronTmpFilePath="/tmp/__ak.updater.installCrontabJob.txt"
   local -r cronUpdaterPath="${AK_SCRIPT_PATH}/.crontab-updater.sh"
-  local -r cronID="AnKor Bash :: Update"
+  local -r cronID="AnKor Shell :: Update"
   local -r cronSchedule="0 */${refreshPeriodHours} * * *"
 
   echo "#!/usr/bin/env bash" > "${cronUpdaterPath}"
