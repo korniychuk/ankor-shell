@@ -1,4 +1,4 @@
-# ankor-bash
+# AnKor Shell
 
 ### Usage
 
@@ -6,16 +6,16 @@
 
 ```bash
 cd /code # just for example
-git clone git@github.com:korniychuk/ankor-bash.git
+git clone git@github.com:korniychuk/ankor-shell.git
 ```
 
 #### 2. Load the library
 
-Add this lines to your `~/.bashrc` / `~/.zshrc` configs  
+Add next lines of code to your `~/.bashrc` / `~/.zshrc` configs  
 ```bash
-# Ankor Bash
-source /code/ankor-bash/index.sh
-source /code/ankor-bash/disk-aliases.sh
-source /code/ankor-bash/nvm-loader.sh
-source /code/ankor-bash/custom-scripts.sh
+# AnKor Shell Library
+source "/code/ankor-shell/index.sh"
+source "${AK_SCRIPT_PATH}/disk-aliases.sh"
+source "${AK_SCRIPT_PATH}/nvm-loader.sh"
+source "${AK_SCRIPT_PATH}/custom-scripts.sh"
 ```
