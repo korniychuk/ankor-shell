@@ -102,6 +102,7 @@ function __ak.inet.check.IPv4() {
   return $?
 }
 
+# TODO: add timeout. The method is too slow
 function __ak.inet.check.DNS() {
   ping -q -c 1 -W 1 google.com >/dev/null 2>/dev/null
   return $?
