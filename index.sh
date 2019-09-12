@@ -13,6 +13,7 @@
 # TODO: Implement ZSH/BASH detection
 # TODO: Implement shopt for ZSH https://stackoverflow.com/questions/26616003/shopt-command-not-found-in-bashrc-after-shell-updation
 # TODO: Check SH and exit
+# TODO: Implement root user checking https://askubuntu.com/questions/15853/how-can-a-script-check-if-its-being-run-as-root
 
 # Notes:
 #  - $BASH_SOURCE[0] used for BASH
