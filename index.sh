@@ -25,6 +25,10 @@
 #
 # TODO: Implement simple one-line installer
 #
+# TODO: ak.git.uncommit -> git reset --soft HEAD~1
+# TODO: ak.git.commit --ak-date="..." ...throw...all...git..params...to...git...
+# TODO: ak.git.redate today|yesterday|tomorrow morning|work|evening
+#
 
 # Notes:
 #  - $BASH_SOURCE[0] used for BASH
