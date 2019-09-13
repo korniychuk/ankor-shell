@@ -127,28 +127,28 @@ function ak.git.auth() {
 #
 # Shows current branch name
 #
-function ak.git.branch() {
+function ak.git.getCurrentBranch() {
   git rev-parse --abbrev-ref HEAD
 }
 
 #
 # Shows current branch name
 #
-function ak.git.tag() {
+function ak.git.getCurrentTag() {
   git describe --exact-match --tags $(git log -n1 --pretty='%h')
 }
 
 #
 # Shows hash of the current HEAD
 #
-function ak.git.hash() {
+function ak.git.getCurrentHash() {
   git rev-parse HEAD
 }
 
 #
 # Shows short hash of the current HEAD
 #
-function ak.git.hash-short() {
+function ak.git.getCurrentShortHash() {
   git rev-parse --short HEAD
 }
 
@@ -166,6 +166,7 @@ function ak.git.log() {
 }
 
 function ak.git.isClean() {
+  # TODO: move the logic to normalize boolean function
   local careAboutUnTracked="${1}"
   if   [[ "${careAboutUnTracked}" == "false" ]] \
     || [[ "${careAboutUnTracked}" == "no" ]] \
@@ -191,6 +192,7 @@ function ak.git.isClean() {
 # 'git push "${@}"' otherwise 'git push --set-upstream origin ${branch} "${@}"'
 #
 # TODO: remove Perl dependency
+# TODO: use mac notificator
 #
 # Examples:
 #
