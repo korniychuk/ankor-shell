@@ -14,6 +14,17 @@
 # TODO: Implement shopt for ZSH https://stackoverflow.com/questions/26616003/shopt-command-not-found-in-bashrc-after-shell-updation
 # TODO: Check SH and exit
 # TODO: Implement root user checking https://askubuntu.com/questions/15853/how-can-a-script-check-if-its-being-run-as-root
+#
+# TODO: Create autoremovable cron task. Something like:
+#  ak.cron.once ./command.sh at 2019-08-22 22:00:00
+#  ak.cron.once ./command.sh at 22:00:00
+#  ak.cron.once ./command.sh at 2019-08-22
+#  ak.cron.once ./command.sh in 2h
+#  ak.cron.once ./command.sh in 2h 35m 35s
+#  and also ak.cron.every with the same arguments
+#
+# TODO: Implement simple one-line installer
+#
 
 # Notes:
 #  - $BASH_SOURCE[0] used for BASH
