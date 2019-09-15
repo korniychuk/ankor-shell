@@ -32,3 +32,23 @@ HELP
 
   echo "${tags}"
 }
+
+#
+# Returns long network IDs.
+# ID Example: bbffeacb7c532949cfa3a92ab0282627d1986a0b24275ec4d500d730f97fb969
+#
+# Notes:
+#   - You can specify only a part of the name (may not from the beginning)
+#   - If by the specified name part multiple networks found, you will get multiple IDs
+#
+# TODO: Check docker installed
+#
+function ak.docker.network.searchIDsByPartialName() {
+  local -r name="${1}"
+  if [[ -z "${name}" ]]; then
+    echo   "ERROR! Argument 'name' is required" >&2
+    return 1
+  fi
+
+  docker network ls --no-trunc --quiet --filter=name="${name}"
+}
