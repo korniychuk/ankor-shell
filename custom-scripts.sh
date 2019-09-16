@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO: Implement sync/local directories
+
 if [[ -z ${AK_CUSTOM_SCRIPTS_PATH+x} ]]; then
   declare -r AK_CUSTOM_SCRIPTS_PATH="${AK_SCRIPT_PATH}/custom-scripts"
 fi
