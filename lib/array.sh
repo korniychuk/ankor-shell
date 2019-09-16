@@ -2,7 +2,7 @@
 
 function ak.array.inArray() {
   local needle="${1}"; shift
-  local haystack="${@}"
+  local haystack=("${@}")
 
   for haystack; do
     if [[ "$haystack" == "$needle" ]]; then
