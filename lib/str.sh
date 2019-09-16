@@ -2,6 +2,7 @@
 
 #
 # Library to work with strings
+# TODO: ak.str.trim
 #
 
 #
