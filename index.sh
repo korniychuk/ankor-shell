@@ -30,6 +30,9 @@
 # TODO: add convenient user management
 #
 # TODO: Implement an autoruner for local-scripts/custom-scripts/scripts
+# TODO: Fix history searching by hh (case sensetivity)
+#
+# TODO: Implement ak.ssh.save, ak.ssh.connect, persistance file storage
 #
 
 # Notes:
