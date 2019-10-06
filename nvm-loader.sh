@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO: Improve to install version automatically https://github.com/nvm-sh/nvm#zsh
+
 # works faster then via brew
 # http://broken-by.me/lazy-load-nvm/
 # https://www.reddit.com/r/node/comments/4tg5jg/lazy_load_nvm_for_faster_shell_start/d5ib9fs/
