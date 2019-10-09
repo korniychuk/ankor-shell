@@ -21,7 +21,7 @@ function ak.str.repeat() {
   local -ri times="${2:-80}"
 
   if [[ ${times} -gt 0 ]]; then
-    printf -- "${str}"'%.s' $(eval "echo {1..${times}}");
+    printf -- "${str}"'%.s' $(eval "echo {1..${times}}")
   fi
 }
 
@@ -30,5 +30,42 @@ function ak.str.repeat() {
 #
 function ak.str.repeatn() {
   ak.str.repeat "${@}"
-  echo;
+  echo
+}
+
+##
+# @example 'he_llo ME wor-ld 23' -> 'HeLloMEWorLd23'
+##
+function ak.str.toTitleCase() {
+  perl -pe 's/(^|[_\s-])(\w)/\U$2/g' <<< "$1"
+}
+
+##
+# @example 'he_llo ME wor-ld 23' -> 'heLloMEWorLd23'
+##
+function ak.str.toCamelCase() {
+  perl -pe 's/([_\s-])(\w)/\U$2/g' <<< "$1"
+}
+
+##
+# @example 'he_llo ME wor-ld 23' -> 'he-llo-me-wor-ld-23'
+##
+function ak.str.toKebabCase() {
+  ak.str.toLowerCase "$1" | perl -pe 's/([_\s-])(\w)/-$2/g'
+}
+
+##
+# @example 'he_llo ME wor-ld 23' -> 'he_llo me wor-ld 23'
+# @see the source https://stackoverflow.com/a/2264537/4843221
+##
+function ak.str.toLowerCase() {
+  tr '[:upper:]' '[:lower:]' <<< "$1"
+}
+
+##
+# @example 'he_llo ME wor-ld 23' -> 'HE_LLO ME WOR-LD 23'
+# @see {@link ak.str.toLowerCase}
+##
+function ak.str.toUpperCase() {
+  tr '[:lower:]' '[:upper:]' <<< "$1"
 }
