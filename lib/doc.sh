@@ -11,7 +11,7 @@ function ak.doc.headingLine() {
 
   local -r strLen=${#title}
   local -r beforeLen=$(( (length - strLen - 2) / 2 ))
-  local -r afterLen=$(( beforeLen + ((length - strLen - 2) % 2 ? 1 : 0) ))
+  local -r afterLen=$(( beforeLen + ( (length - strLen - 2) % 2 ? 1 : 0) ))
 
   echo "$(ak.str.repeat "${char}" "${beforeLen}") ${title} $(ak.str.repeat "${char}" "${afterLen}")"
 }
@@ -29,7 +29,7 @@ function ak.doc.heading() {
 #
 # Like HTML's <hr> tag
 #
-function.doc.hr() {
+function ak.doc.hr() {
   local -r char="${1:--}"
 
   ak.str.repeatn "${char}"
