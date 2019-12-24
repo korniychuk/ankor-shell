@@ -243,6 +243,20 @@ function ak.git.uncommit() {
 }
 
 #
+# Reset all uncommited changes to HEAD
+#
+function ak.git.reset() {
+    git reset --hard HEAD
+}
+
+#
+# Reset all uncommited changes to origin/{current-branch}
+#
+function ak.git.reset-remote() {
+    git reset --hard "origin/$(ak.git.getCurrentBranch)"
+}
+
+#
 # TODO: finish it, add validation, and simplify date specification
 # Example:
 #
