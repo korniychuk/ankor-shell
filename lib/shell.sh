@@ -18,8 +18,8 @@
 #   fi
 #
 function ak.sh.type() {
-  if [[ ! -z "${ZSH_VERSION+x}" ]];                                   then echo 'zsh';
-  elif [[ ! -z "${BASH_VERSION+x}" ]];                                then echo 'bash';
+  if   [[ -n "${ZSH_VERSION+x}"  ]];                                  then echo 'zsh';
+  elif [[ -n "${BASH_VERSION+x}" ]];                                  then echo 'bash';
   else                                                                     echo 'unknown';
   fi
 }
@@ -61,13 +61,17 @@ function ak.sh.isUnknown() {
 #
 # @example Custom message
 #
-# if ak.sh.confirm 'Are you sure to delete .env file?'; then
-#   rm -f .env
-# fi
+#   if ak.sh.confirm 'Are you sure to delete .env file?'; then
+#     rm -f .env
+#   fi
+#
+# @example Without 'if' statement
+#
+#   ak.sh.confirm 'Are you sure to delete .env file?' && rm -f .env
 #
 function ak.sh.confirm() {
-  declare -r msg="${1:-Are you sure?} [y/N]: "
-  declare response
+  local -r msg="${1:-Are you sure?} [y/N]: "
+  local response
 
   # 'echo' used instead of '-p' flag for 'read' because of some shells doesn't support the '-p' flag
   # (in ZSH for example on Mac OS X systems)
