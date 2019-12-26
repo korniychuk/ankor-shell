@@ -48,7 +48,7 @@ function ak.bash.checkBashVersion() {
 function ak.bash.commandExists() {
   local -r command="${1}";
 
-  if [[ -x "$(which "${command}")" ]]; then
+  if [[ -x "$(command -v "${command}")" ]]; then
     return 0;
   fi
 
