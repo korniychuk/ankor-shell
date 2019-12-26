@@ -98,12 +98,12 @@ function ak.sh.history() {
 
   if [[ -z "${phrase}" ]]; then
       echo 'ArgError: No search phrase' >&2
-      return 1
+      false
   fi
 
   if [[ "${limit}" -le 0 ]]; then
       echo 'ArgError: limit should greater then 0' >&2
-      return 1
+      false
   fi
 
   history \
@@ -113,12 +113,10 @@ function ak.sh.history() {
     | sort -k1 \
     | tail -n ${limit} \
     | grep --color=auto "${phrase}"
-
-  return 0
 }
 
 #
-# Example:
+# @example
 #
 #   if ! ak.sh.commandExists node; then
 #     echo 'NodeJS should be installed' >&2
