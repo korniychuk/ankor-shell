@@ -36,7 +36,3 @@ function ak.bash.checkBashVersion() {
      return 1
   fi
 }
-
-function ak.bash.showConfig() {
-  cat "${AK_SCRIPT_PATH}/config.sh" | tail -n +3
-}
