@@ -14,8 +14,8 @@
 #
 
 #
-# Notice: This library doesn't work in SH.
-# TODO: Investigate, is there any existing solutions
+# Returns currently opened SHELL type.
+# Notice: This library works only with bash & zsh
 #
 # @example
 #
@@ -24,10 +24,14 @@
 #   fi
 #
 function ak.sh.type() {
-  if   [[ -n "${ZSH_VERSION+x}"  ]];                                  then echo 'zsh';
-  elif [[ -n "${BASH_VERSION+x}" ]];                                  then echo 'bash';
-  else                                                                     echo 'unknown';
-  fi
+  local type
+  type=$(ps -hp $$ | tail -n -1 | awk '{print $4}' | tr -d '-')
+
+  case "$type" in
+    zsh)    echo 'zsh'       ;;
+    bash)   echo 'bash'      ;;
+    *)      echo 'unknown'   ;;
+  esac
 }
 
 #
