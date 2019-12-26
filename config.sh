@@ -25,7 +25,7 @@ alias fd='find . -type d -iname'
 alias g='grep . -ri -e'
 
 # Other
-alias hh='ak.bash.history'
+alias hh='ak.sh.history'
 alias j='jobs -l'
 alias rr="rm -rf"
 alias e="exit"
