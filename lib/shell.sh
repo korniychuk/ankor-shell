@@ -101,6 +101,7 @@ function ak.sh.confirm() {
 # @param {string}  *phrase phrase to search
 # @param {integer}  limit  number of results to show (default is 50)
 #                          (should be bigger 0)
+# TODO: case sensetivity via -i for grep. name it optional
 #
 function ak.sh.history() {
   local -r phrase="${1}"
