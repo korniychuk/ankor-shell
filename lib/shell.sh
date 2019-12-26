@@ -116,3 +116,21 @@ function ak.sh.history() {
 
   return 0
 }
+
+#
+# Example:
+#
+#   if ! ak.sh.commandExists node; then
+#     echo 'NodeJS should be installed' >&2
+#     exit 1s
+#   fi
+#
+function ak.sh.commandExists() {
+  local -r command="${1}";
+
+  if [[ -x "$(command -v "${command}")" ]]; then
+    return 0;
+  fi
+
+  return 1;
+}

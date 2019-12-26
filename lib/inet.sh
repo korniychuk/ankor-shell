@@ -15,7 +15,7 @@ function ak.inet.serve() {
   local -r -i port="${1:-8000}"
   local -r ip="${2:-127.0.0.1}"
 
-  if ! ak.bash.commandExists python3; then
+  if ! ak.sh.commandExists python3; then
     echo "ERROR! python3 interpreter not found" >&2
     return 1
   fi

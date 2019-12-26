@@ -37,24 +37,6 @@ function ak.bash.checkBashVersion() {
   fi
 }
 
-#
-# Example:
-#
-#   if ! ak.bash.commandExists node; then
-#     echo 'NodeJS should be installed' >&2
-#     exit 1s
-#   fi
-#
-function ak.bash.commandExists() {
-  local -r command="${1}";
-
-  if [[ -x "$(command -v "${command}")" ]]; then
-    return 0;
-  fi
-
-  return 1;
-}
-
 function ak.bash.showConfig() {
   cat "${AK_SCRIPT_PATH}/config.sh" | tail -n +3
 }
