@@ -128,11 +128,9 @@ function ak.sh.history() {
 function ak.sh.commandExists() {
   local -r command="${1}";
 
-  if [[ -x "$(command -v "${command}")" ]]; then
-    return 0;
+  if [[ ! -x "$(command -v "${command}")" ]]; then
+    false
   fi
-
-  return 1;
 }
 
 function ak.sh.showConfig() {
