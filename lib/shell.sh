@@ -98,12 +98,12 @@ function ak.sh.history() {
 
   if [[ -z "${phrase}" ]]; then
       echo 'ArgError: No search phrase' >&2
-      false
+      return 1
   fi
 
   if [[ "${limit}" -le 0 ]]; then
       echo 'ArgError: limit should greater then 0' >&2
-      false
+      return 2
   fi
 
   history \
