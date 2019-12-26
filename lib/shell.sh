@@ -84,3 +84,35 @@ function ak.sh.confirm() {
     false
   fi
 }
+
+#
+# Search in the Shell history, highlighting matches, sorting results, limitate output
+#
+# @param {string}  *phrase phrase to search
+# @param {integer}  limit  number of results to show (default is 50)
+#                          (should be bigger 0)
+#
+function ak.sh.history() {
+  local -r phrase="${1}"
+  local -r limit="${2:-50}"
+
+  if [[ -z "${phrase}" ]]; then
+      echo 'ArgError: No search phrase' >&2
+      return 1
+  fi
+
+  if [[ "${limit}" -le 0 ]]; then
+      echo 'ArgError: limit should greater then 0' >&2
+      return 1
+  fi
+
+  history \
+    | grep "${phrase}" \
+    | sort -r -k2 \
+    | uniq -f2 \
+    | sort -k1 \
+    | tail -n ${limit} \
+    | grep --color=auto "${phrase}"
+
+  return 0
+}
