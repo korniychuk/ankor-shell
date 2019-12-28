@@ -25,7 +25,7 @@
 #
 function ak.sh.type() {
   local type
-  type=$(ps -hp $$ | grep sh | awk '{print $4}' | tr -d '-')
+  type=$(ps -hp $$ | grep sh | sed -E 's/.*((z|ba|c|tc|k)sh)$/\1/g')
 
   case "$type" in
     zsh)    echo 'zsh'       ;;
