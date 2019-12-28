@@ -98,14 +98,17 @@ function ak.sh.confirm() {
 #
 # Search in the Shell history, highlighting matches, sorting results, limitate output
 #
-# @param {string}  *phrase phrase to search
-# @param {integer}  limit  number of results to show (default is 50)
-#                          (should be bigger 0)
-# TODO: case sensetivity via -i for grep. name it optional
+# @param {string}  *phrase          phrase to search
+# @param {integer}  limit           number of results to show (default is 50)
+#                                   (should be bigger 0)
+# @param {boolean}  isCaseSensitive true/false or 0/1 (default is false)
+#
+# TODO: Use boolean convertion function for type casting
 #
 function ak.sh.history() {
   local -r phrase="${1}"
   local -r limit="${2:-50}"
+  local -r isCaseSensitive=${3:-false}
 
   if [[ -z "${phrase}" ]]; then
       echo 'ArgError: No search phrase' >&2
@@ -117,13 +120,18 @@ function ak.sh.history() {
       return 2
   fi
 
+  local grepParams=()
+  if [[ "${isCaseSensitive}" != "true" ]] && [[ "${isCaseSensitive}" != "1" ]]; then
+      grepParams+='-i'
+  fi
+
   history \
-    | grep "${phrase}" \
+    | grep "${grepParams[@]}" "${phrase}" \
     | sort -r -k2 \
     | uniq -f2 \
     | sort -k1 \
     | tail -n ${limit} \
-    | grep --color=auto "${phrase}"
+    | grep "${grepParams[@]}" --color=auto "${phrase}"
 }
 
 #
