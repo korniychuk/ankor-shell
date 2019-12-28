@@ -58,7 +58,6 @@ function ak.sh.isUnknown() {
 
 #
 # Ask confirmation from the user.
-# TODO: check with ZSH and BASH on the Linux (vps)
 #
 # @param {string} msg custom confirmation message (optional)
 #                     default value is: 'Are you sure?'
