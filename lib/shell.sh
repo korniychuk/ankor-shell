@@ -124,10 +124,12 @@ function ak.sh.history() {
       grepParams+='-i'
   fi
 
+  # Notice: 'awk' used for trimming leading and trailing space.
+  # See: https://unix.stackexchange.com/questions/102008/how-do-i-trim-leading-and-trailing-whitespace-from-each-line-of-some-output/205854
   history \
     | grep "${grepParams[@]}" "${phrase}" \
-    | sort -r -k2 \
-    | uniq -f2 \
+    | awk '{$1=$1};1' \
+    | sort -r -k2 -u \
     | sort -k1 \
     | tail -n ${limit} \
     | grep "${grepParams[@]}" --color=auto "${phrase}"
