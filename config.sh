@@ -30,6 +30,7 @@ alias j='jobs -l'
 alias rr="rm -rf"
 alias e="exit"
 alias v="vim"
+alias vz="v ~/.zshrc"
 alias gpn="ak.git.push --no-verify"
 alias akhelp="ak.bash.showConfig"
 
