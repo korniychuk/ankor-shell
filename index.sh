@@ -32,7 +32,6 @@
 # TODO: add convenient user management
 #
 # TODO: Implement an autoruner for local-scripts/custom-scripts/scripts
-# TODO: Fix history searching by hh (case sensetivity)
 #
 # TODO: Implement ak.ssh.save, ak.ssh.connect, persistance file storage
 #
@@ -49,6 +48,7 @@ source "${AK_SCRIPT_PATH}/lib/str.sh"
 source "${AK_SCRIPT_PATH}/lib/array.sh"
 
 source "${AK_SCRIPT_PATH}/lib/bash.sh"
+source "${AK_SCRIPT_PATH}/lib/shell.sh"
 source "${AK_SCRIPT_PATH}/lib/gen.sh"
 source "${AK_SCRIPT_PATH}/lib/doc.sh"
 source "${AK_SCRIPT_PATH}/lib/os.sh"

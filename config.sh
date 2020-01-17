@@ -25,14 +25,14 @@ alias fd='find . -type d -iname'
 alias g='grep . -ri -e'
 
 # Other
-alias hh='ak.bash.history'
+alias hh='ak.sh.history'
 alias j='jobs -l'
 alias rr="rm -rf"
 alias e="exit"
 alias v="vim"
 alias vz="v ~/.zshrc"
 alias gpn="ak.git.push --no-verify"
-alias akhelp="ak.bash.showConfig"
+alias akhelp="ak.sh.showConfig"
 
 # Inet
 alias ic="ak.inet.check; echo; ak.inet.ping.DNS"

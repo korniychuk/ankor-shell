@@ -211,13 +211,13 @@ function ak.git.push() {
     git push "${@}"
 
     echo "Pushed"
-    ak.bash.commandExists osascript && osascript -e 'display notification "Pushed"'
+    ak.sh.commandExists osascript && osascript -e 'display notification "Pushed"'
   else
     local branch=$(git branch --list | grep "^\* " | perl -pe 's/^\* //g')
     git push --set-upstream origin ${branch} "${@}"
 
     echo "Pushed with --set-upstream"
-    ak.bash.commandExists osascript && osascript -e 'display notification "Pushed with --set-upstream"'
+    ak.sh.commandExists osascript && osascript -e 'display notification "Pushed with --set-upstream"'
   fi
 }
 

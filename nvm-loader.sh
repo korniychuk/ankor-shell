@@ -43,7 +43,7 @@ function __ak.nvm.load() {
       ak.nvm.version 0
     fi
 
-    if ! ak.bash.commandExists node; then
+    if ! ak.sh.commandExists node; then
       return 1
     fi
 
@@ -78,12 +78,12 @@ function ak.nvm.version() {
     nvmRcInfo=' (Default)'
   fi
 
-  if ak.bash.commandExists node; then
+  if ak.sh.commandExists node; then
     echo -en "\r${cursorToPreviousLine}${__ak_nvm_msgPrefix} ${style_BoldGreen}Loaded${style_Off} --> "
     echo -en "node: ${style_Bold}$(node --version)${style_Off}${nvmRcInfo}"
     echo -en "   npm: ${style_Bold}$(npm --version)${style_Off}"
     echo -en "   nvm: ${style_Bold}$(nvm --version)${style_Off}"
-    if ak.bash.commandExists yarn; then
+    if ak.sh.commandExists yarn; then
       echo -en "   yarn: ${style_Bold}$(yarn --version)${style_Off}"
     else
       echo -en "   yarn: ${style_BoldRed}NO${style_Off}"
