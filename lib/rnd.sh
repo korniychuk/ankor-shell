@@ -23,3 +23,23 @@ function ak.rnd.objectId() {
   done
   echo
 }
+
+##
+# Generate random integer in specified range
+#
+# @param {integer} from The mininum number (inclusive)
+# @param {integer} to   The maximum number (inclusive)
+#
+# @output {integer} Generated number
+#
+# @example:
+#
+#   ak.rnd.int 1 10   # 7
+##
+function ak.rnd.int() {
+  local -r -i from="${1}"
+  local -r -i to="${2}"
+
+  echo $(( RANDOM % to + from ))
+}
+
