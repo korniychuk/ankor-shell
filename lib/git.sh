@@ -263,9 +263,55 @@ function ak.git.reset-remote() {
 #   ak.git.commit "2019-07-22 13:46:55" -m "My Commit"
 #
 function ak.git.commit() {
-  local -r date="${1}"; shift
+  local -r dateTime="${1}"; shift
 
-  export GIT_COMMITTER_DATE="${date}"
-  export GIT_AUTHOR_DATE="${date}"
-  git commit --date="${date}" "${@}"
+  export GIT_COMMITTER_DATE="${dateTime}"
+  export GIT_AUTHOR_DATE="${dateTime}"
+  git commit --date="${dateTime}" "${@}"
+}
+
+# TODO: add description
+# TODO: add errors handling
+function ak.git.getNextCommitId() {
+  local -r commitId="${1}"
+  local -r targetBranchName="${2:-HEAD}"
+
+  git rev-list "${commitId}..${targetBranchName}" | tail -n 1
+}
+
+# TODO: add description
+# TODO: add errors handling
+function ak.git.getParentCommitId() {
+  local -r commitId="${1}"
+  git rev-list -n 1 "${commitId}^"
+}
+
+# TODO: add description
+# TODO: add errors handling
+# TODO: notify if commit not found
+function ak.git.changeCommitDate() {
+  local -r commitId="${1}"
+  local -r dateTime="${2}"
+  local -r targetBranchName="HEAD"
+
+  local parentCommitId
+  parentCommitId=$(ak.git.getParentCommitId "${commitId}")
+
+  git filter-branch -f --env-filter \
+    "if [ \"\$GIT_COMMIT\" = \"${commitId}\" ]
+     then
+            export GIT_AUTHOR_DATE=\"${dateTime}\"
+         export GIT_COMMITTER_DATE=\"${dateTime}\"
+     fi" "${parentCommitId}..${targetBranchName}" > /dev/null
+
+  ak.git.getNextCommitId "${parentCommitId}"
+}
+
+# TODO: add description
+# TODO: add errors handling
+# TODO: move format to somewhere
+function ak.git.getCommitDateTime() {
+  local -r commitId="${1}"
+
+  git --no-pager show -s --format=%cd --date=format:'%Y-%m-%d %H:%M:%S' "${commitId}"
 }
