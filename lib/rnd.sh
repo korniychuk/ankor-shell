@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+##
+# Generate any random things here
+# @module: Random
+##
+
+##
+# Generate Mongo DB's Object ID for now
+#
+# @output {string} Generated ObjectID
+#
+# @example:
+#
+#   ak.rnd.objectId   # 5e272bec8a1fed605aa7369f
+#
+##
+function ak.rnd.objectId() {
+  printf "%x" $(date "+%s")
+  local -i i=0
+  for (( i = 0; i < 16; ++i )); do
+      printf "%x" $(( RANDOM % 16 ))
+  done
+  echo
+}
