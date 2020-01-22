@@ -32,7 +32,7 @@ function ak.inet.serve() {
  #
  # @example <caption>Show all allocated ports</caption>
  #
- #   $ ak.inet.showListeningPorts 80
+ #   $ ak.inet.showListeningPorts
  #
  #   > docker-pr 12497 root    4u  IPv6 57034858      0t0  TCP *:443 (LISTEN)
  #   > docker-pr 12509 root    4u  IPv6 57034885      0t0  TCP *:80 (LISTEN)
