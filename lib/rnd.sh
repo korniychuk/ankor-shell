@@ -35,11 +35,16 @@ function ak.rnd.objectId() {
 # @example:
 #
 #   ak.rnd.int 1 10   # 7
+#
+# Notice: $RANDOM is a bad way because of in the next case will always return the same value
+#
+#   echo "$(echo $RANDOM)" # always the same
+#
 ##
 function ak.rnd.int() {
   local -r -i from="${1}"
   local -r -i to="${2}"
 
-  echo $(( RANDOM % to + from ))
+  shuf -i "${from}-${to}" -n 1
 }
 
