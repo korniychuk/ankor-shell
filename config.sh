@@ -32,6 +32,7 @@ alias e="exit"
 alias v="vim"
 alias vz="v ~/.zshrc"
 alias gpn="ak.git.push --no-verify"
+alias gln="git pull --no-edit"
 alias akhelp="ak.sh.showConfig"
 
 # Inet
