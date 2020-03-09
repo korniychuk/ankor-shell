@@ -24,21 +24,39 @@ function ak.inet.serve() {
   python3 -m http.server ${port} --bind "${ip}"
 }
 
-#
-# Show listening on the local machine ports and PIDs of processes
-# TODO: implement the way to run without sudo
-#
-# The code is taken from this link:
-# https://stackoverflow.com/questions/4421633/who-is-listening-on-a-given-tcp-port-on-mac-os-x
-#
+##
+ # Show listening on the local machine ports and PIDs of processes
+ # TODO: implement the way to run without sudo
+ #
+ # @param {integer} [port=] Port number, if you want to find only one specific application
+ #
+ # @example <caption>Show all allocated ports</caption>
+ #
+ #   $ ak.inet.showListeningPorts
+ #
+ #   > docker-pr 12497 root    4u  IPv6 57034858      0t0  TCP *:443 (LISTEN)
+ #   > docker-pr 12509 root    4u  IPv6 57034885      0t0  TCP *:80 (LISTEN)
+ #   > ...
+ #
+ # @example <caption>Find the process that took port 80</caption>
+ #
+ #   $ ak.inet.showListeningPorts 80
+ #
+ #   > docker-pr 12509 root    4u  IPv6 57034885      0t0  TCP *:80 (LISTEN)
+ #
+ # The code is taken from this link:
+ # https://stackoverflow.com/questions/4421633/who-is-listening-on-a-given-tcp-port-on-mac-os-x
+##
 function ak.inet.showListeningPorts() {
-    if [[ ${#} -eq 0 ]]; then
-        sudo lsof -iTCP -sTCP:LISTEN -n -P
-    elif [[ ${#} -eq 1 ]]; then
-        sudo lsof -iTCP -sTCP:LISTEN -n -P | grep -i --color $1
-    else
-        echo "Usage: listening [pattern]"
-    fi
+  local -r -i port="${1}"
+
+  if [[ ${#} -eq 0 ]]; then
+    sudo lsof -iTCP -sTCP:LISTEN -n -P
+  elif [[ ${#} -eq 1 ]]; then
+    sudo lsof -iTCP -sTCP:LISTEN -n -P | grep -i --color "${port}"
+  else
+    echo "Usage: listening [port]"
+  fi
 }
 
 function ak.inet.IPsOfHost() {
