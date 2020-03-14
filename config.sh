@@ -31,8 +31,9 @@ alias rr="rm -rf"
 alias e="exit"
 alias v="vim"
 alias vz="v ~/.zshrc"
-alias gpn="ak.git.push --no-verify"
-alias gln="git pull --no-edit"
+alias gpn="ak.git.push --no-verify" # Git Push with No verify
+alias gln="git pull --no-edit"      # Git puLl with No edit
+alias gpp='gln && gpn'              # Git Pull & Push
 alias akhelp="ak.sh.showConfig"
 
 # Inet
