@@ -11,6 +11,123 @@
 # Mac OS X specific scripts
 #
 
+##
+# Creates a simple Mac OS App from a bash script
+#
+# Script source: https://gist.github.com/oubiwann/453744744da1141ccc542ff75b47e0cf
+# Another helpful link: https://gist.github.com/mathiasbynens/674099
+##
+function ak.macos.appify() {
+  local _appName="My App"
+  local _appIcons="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericApplicationIcon.icns"
+  local appScript
+
+  while :; do
+    case $1 in
+      -h | --help )    _ak.macos.appify.usage; return;;
+      -s | --script )  appScript="$2"; shift ;;
+      -n | --name )    _appName="$2"; shift ;;
+      -i | --icons )   _appIcons="$2"; shift ;;
+      -v | --version ) _ak.macos.appify.version; return;;
+      -- )             shift; break ;;
+      * )              break ;;
+    esac
+    shift
+  done
+
+  if [[ -z ${appScript+nil} ]]; then
+    _ak.macos.appify.error "the script to appify must be provided!"
+    return 1
+  fi
+
+  if [[ ! -f "$appScript" ]]; then
+    _ak.macos.appify.error "the can't find the script '$appScript'"
+    return 2
+  fi
+
+  if [[ -a "$_appName.app" ]]; then
+    _ak.macos.appify.error "the bundle '$PWD/$_appName.app' already exists"
+    return 3
+  fi
+
+  local -r _appDir="$_appName.app/Contents"
+
+  mkdir -vp "$_appDir"/{MacOS,Resources}
+  cp -v "$_appIcons" "$_appDir/Resources/$_appName.icns"
+  cp -v "$appScript" "$_appDir/MacOS/$_appName"
+  chmod +x "$_appDir/MacOS/$_appName"
+
+  cat <<EOF > "$_appDir/Info.plist"
+  <?xml version="1.0" encoding="UTF-8"?>
+  <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+  <plist version="1.0">
+    <dict>
+      <key>CFBundleExecutable</key>
+      <string>$_appName</string>
+      <key>CFBundleGetInfoString</key>
+      <string>$_appName</string>
+      <key>CFBundleIconFile</key>
+      <string>$_appName</string>
+      <key>CFBundleName</key>
+      <string>$_appName</string>
+      <key>CFBundlePackageType</key>
+      <string>APPL</string>
+      <key>CFBundleSignature</key>
+      <string>4242</string>
+    </dict>
+  </plist>
+EOF
+
+  echo "Application bundle created at '$PWD/$_appName.app'"
+  echo
+}
+
+function _ak.macos.appify.version() {
+  local -r _version=4.0.1
+  echo "${_version}"
+}
+
+function _ak.macos.appify.error {
+  echo
+  echo "ERROR: $1" >&2
+  echo
+  _ak.macos.appify.usage
+}
+
+function _ak.macos.appify.usage() {
+  local -r _script='ak.macos.appify.usage'
+  local -r _appIcons="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericApplicationIcon.icns"
+
+  cat <<EOF
+Appify v$(_ak.macos.appify.version) for Mac OS X - https://gist.github.com/oubiwann/453744744da1141ccc542ff75b47e0cf
+
+Usage:
+  $_script [options]
+
+Options:
+  -h, --help      Prints this help message, then exits
+  -s, --script    Name of the script to 'appify' (required)
+  -n, --name      Name of the application (default "$_appName")
+  -i, --icons     Name of the icons file to use when creating the app
+                        (defaults to $_appIcons)
+  -v, --version   Prints the version of this script, then exits
+
+Description:
+  Creates the simplest possible Mac app from a shell script.
+  Appify has one required parameter, the script to appify:
+    $_script --script my-app-script.sh
+  Note that you cannot rename appified apps. If you want to give your app
+  a custom name, use the '--name' option
+    $_script --script my-app-script.sh --name "Sweet"
+
+Copyright:
+  Copyright (c) Thomas Aylott <http://subtlegradient.com/>
+  Modified by Mathias Bynens <http://mathiasbynens.be/>
+  Modified by Andrew Dvorak <http://OhReally.net/>
+  Rewritten by Duncan McGreggor <http://github.com/oubiwann/>
+EOF
+}
+
 #
 # Create a separate Chrome launcher
 #
