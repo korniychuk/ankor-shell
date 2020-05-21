@@ -307,6 +307,10 @@ function ak.git.changeCommitDate() {
   ak.git.getNextCommitId "${parentCommitId}"
 }
 
+function ak.git.showCommitsNumberStatistic() {
+  git shortlog -s -n --all --no-merges
+}
+
 # TODO: add description
 # TODO: add errors handling
 # TODO: move format to somewhere
