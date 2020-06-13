@@ -58,6 +58,7 @@ source "${AK_SCRIPT_PATH}/lib/git.sh"
 source "${AK_SCRIPT_PATH}/lib/inet.sh"
 source "${AK_SCRIPT_PATH}/lib/updater.sh"
 source "${AK_SCRIPT_PATH}/lib/docker.sh"
+source "${AK_SCRIPT_PATH}/lib/downloader.sh"
 
 if ak.os.type.isMacOS; then
   source "${AK_SCRIPT_PATH}/lib/macos.sh"
