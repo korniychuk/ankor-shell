@@ -239,7 +239,7 @@ declare chromeApp=$(mdfind 'kMDItemCFBundleIdentifier == "com.google.Chrome"' | 
 declare -r chromeBin="$chromeApp/Contents/MacOS/Google Chrome"
 if [[ ! -e "${chromeBin}" ]]; then
   echo "ERROR: Can not find Google Chrome. Exiting."
-  exit -1
+  exit 1
 fi
 
 # Start me up!
