@@ -35,6 +35,9 @@
 #
 # TODO: Implement ak.ssh.save, ak.ssh.connect, persistance file storage
 #
+# TODO: Implement pbcopy/pbpaste for linux
+# - http://itisgood.ru/2018/07/31/kak-ispolzovat-komandy-pbcopy-i-pbpaste-v-linux/
+# - https://unix.stackexchange.com/questions/566081/xsel-cant-open-display-null?answertab=active#tab-top
 
 # Notes:
 #  - $BASH_SOURCE[0] used for BASH

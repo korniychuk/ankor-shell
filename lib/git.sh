@@ -131,6 +131,10 @@ function ak.git.getCurrentBranch() {
   git rev-parse --abbrev-ref HEAD
 }
 
+function ak.git.copyCurrentBranch() {
+  ak.git.getCurrentBranch | pbcopy
+}
+
 #
 # Shows current branch name
 #
@@ -145,11 +149,19 @@ function ak.git.getCurrentHash() {
   git rev-parse HEAD
 }
 
+function ak.git.copyCurrentHash() {
+  ak.git.getCurrentHash | pbcopy
+}
+
 #
 # Shows short hash of the current HEAD
 #
 function ak.git.getCurrentShortHash() {
   git rev-parse --short HEAD
+}
+
+function ak.git.copyCurrentShortHash() {
+  ak.git.getCurrentShortHash | pbcopy
 }
 
 function ak.git.log() {
