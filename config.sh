@@ -34,7 +34,7 @@ alias vz="v ~/.zshrc"
 alias gpn="ak.git.push --no-verify"  # Git Push with No verify
 alias gln="git pull --no-edit"       # Git puLl with No edit
 alias gpp='gln && gpn'               # Git Pull & Push
-alias gcb='ak.git.copyCurrentBranch' # Git Copy Branch
+alias gcb='echo "Git Branch: $(ak.git.getCurrentBranch) (copied)" && ak.git.copyCurrentBranch' # Git Copy Branch
 alias akhelp="ak.sh.showConfig"
 
 # Inet
