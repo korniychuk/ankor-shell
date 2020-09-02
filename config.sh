@@ -31,11 +31,12 @@ alias rr="rm -rf"
 alias e="exit"
 alias v="vim"
 alias vz="v ~/.zshrc"
-alias gpn="ak.git.push --no-verify" # Git Push with No verify
-alias gln="git pull --no-edit"      # Git puLl with No edit
-alias gpp='gln && gpn'              # Git Pull & Push
+alias gpn="ak.git.push --no-verify"  # Git Push with No verify
+alias gln="git pull --no-edit"       # Git puLl with No edit
+alias gpp='gln && gpn'               # Git Pull & Push
+alias gcb='ak.git.copyCurrentBranch' # Git Copy Branch
 alias akhelp="ak.sh.showConfig"
 
 # Inet
 alias ic="ak.inet.check; echo; ak.inet.ping.DNS"
-alias ip='echo -e "IPv4: $(ak.inet.getExternalIPv4)\nIPv6: $(ak.inet.getExternalIPv6)"'
+alias myip='echo -e "IPv4: $(ak.inet.getExternalIPv4)\nIPv6: $(ak.inet.getExternalIPv6)"'
