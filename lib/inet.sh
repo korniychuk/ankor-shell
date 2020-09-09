@@ -157,3 +157,60 @@ function __ak.inet.check.connectivity() {
        *) return 2;; # The network is down or very slow
   esac
 }
+
+##
+# URL encode script for encoding text.
+#
+# @param {string} raw a URL to encode
+# @returns {string} safe encoded URL
+#
+# Example:
+#
+#     $ ak.inet.urlencode "foo bar"
+#     foo%20bar
+#
+# This implementation uses just the shell, with no extra dependencies or languages.
+# Original script: https://github.com/SixArm/urlencode.sh/blob/master/urlencode.sh
+##
+function ak.inet.urlencode() {
+    local -r raw="${1}"
+
+    local -r oldLang=$LANG
+    LANG=C
+
+    local -r oldLCCollate=LC_COLLATE
+    LC_COLLATE=C
+
+    local -r length="${#raw}"
+    local -i i
+    for (( i = 0; i < length; i++ )); do
+        local c="${raw:$i:1}"
+        case $c in
+            [a-zA-Z0-9.~_-]) printf '%s' "$c" ;;
+            *) printf '%%%02X' "'$c" ;;
+        esac
+    done
+
+    LANG=$oldLang
+    LC_COLLATE=$oldLCCollate
+}
+
+##
+# URI script to encode text, for example a CGI query string.
+#
+# @param {string} encodedUrl
+# @returns {string} decoded url
+#
+# Example:
+#
+#     $ urldecode "foo%26bar"
+#     foo&bar
+#
+# Original script: https://unix.stackexchange.com/a/272303
+# One more solution that doesn't work: https://github.com/SixArm/urldecode.sh/blob/master/urldecode.sh
+##
+function ak.inet.urldecode() {
+    local -r encodedUrl="${1}"
+
+    echo -ne "$(echo -n "${encodedUrl}" | sed -E "s/%/\\\\x/g")"
+}
