@@ -169,6 +169,10 @@ function __ak.inet.check.connectivity() {
 #     $ ak.inet.urlencode "foo bar"
 #     foo%20bar
 #
+# Notes:
+# 1. If you are going to use it with `curl` no need to do it! Use `--data-urlencode` & `-G` params for `curl`
+# 2. This function works like `encodeURIComponent` (not `encodeURI`) in JS. So, to decode use `decodeURIComponent`.
+#
 # This implementation uses just the shell, with no extra dependencies or languages.
 # Original script: https://github.com/SixArm/urlencode.sh/blob/master/urlencode.sh
 ##
