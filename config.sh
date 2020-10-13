@@ -40,3 +40,10 @@ alias akhelp="ak.sh.showConfig"
 # Inet
 alias ic="ak.inet.check; echo; ak.inet.ping.DNS"
 alias myip='echo -e "IPv4: $(ak.inet.getExternalIPv4)\nIPv6: $(ak.inet.getExternalIPv6)"'
+
+if [[ -x "${PWD}/.ak-init.sh" ]] && [[ -z "${LOCAL_AK_SHELL_INITIALIZED}" ]]; then
+  export LOCAL_AK_SHELL_INITIALIZED=true
+  # shellcheck source=/dev/null
+  source "${PWD}/.ak-init.sh"
+  echo "Loaded: ./.ak-init.sh"
+fi
