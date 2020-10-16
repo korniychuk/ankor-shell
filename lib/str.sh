@@ -69,3 +69,10 @@ function ak.str.toLowerCase() {
 function ak.str.toUpperCase() {
   tr '[:lower:]' '[:upper:]' <<< "$1"
 }
+
+##
+# Deletes final '\n' char if it exists
+##
+function ak.str.trimFinalNewLine() {
+  perl -pe 'chomp if eof'
+}

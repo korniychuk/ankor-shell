@@ -132,7 +132,7 @@ function ak.git.getCurrentBranch() {
 }
 
 function ak.git.copyCurrentBranch() {
-  ak.git.getCurrentBranch | pbcopy
+  ak.git.getCurrentBranch | ak.str.trimFinalNewLine | pbcopy
 }
 
 #
@@ -150,7 +150,7 @@ function ak.git.getCurrentHash() {
 }
 
 function ak.git.copyCurrentHash() {
-  ak.git.getCurrentHash | pbcopy
+  ak.git.getCurrentHash | ak.str.trimFinalNewLine | pbcopy
 }
 
 #
@@ -161,7 +161,7 @@ function ak.git.getCurrentShortHash() {
 }
 
 function ak.git.copyCurrentShortHash() {
-  ak.git.getCurrentShortHash | pbcopy
+  ak.git.getCurrentShortHash | ak.str.trimFinalNewLine | pbcopy
 }
 
 function ak.git.log() {
