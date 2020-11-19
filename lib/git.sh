@@ -319,6 +319,27 @@ function ak.git.changeCommitDate() {
   ak.git.getNextCommitId "${parentCommitId}"
 }
 
+# TODO: add description
+# TODO: add errors handling
+# TODO: notify if commit not found
+function ak.git.changeCommitAuthor() {
+  local -r commitId="${1}"
+  local -r newName="${2}"
+  local -r newEmail="${3}"
+  local -r targetBranchName="HEAD"
+
+  local parentCommitId
+  parentCommitId=$(ak.git.getParentCommitId "${commitId}")
+
+  git filter-branch -f --env-filter \
+    "if [ \"\$GIT_COMMIT\" = \"${commitId}\" ]; then
+          export GIT_COMMITTER_NAME=\"${newName}\"
+          export GIT_COMMITTER_EMAIL=\"${newEmail}\"
+          export GIT_AUTHOR_NAME=\"${newName}\"
+          export GIT_AUTHOR_EMAIL=\"${newEmail}\"
+     fi" "${parentCommitId}..${targetBranchName}" > /dev/null
+}
+
 function ak.git.showCommitsNumberStatistic() {
   git shortlog -s -n --all --no-merges
 }
