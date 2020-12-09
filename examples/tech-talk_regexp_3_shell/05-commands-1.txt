@@ -1,0 +1,3 @@
+s/apple/one/
+s/banana/two/
+s/pear/three/
