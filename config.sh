@@ -32,6 +32,7 @@ alias e="exit"
 alias v="vim"
 alias vz="v ~/.zshrc"
 alias gpn="ak.git.push --no-verify"  # Git Push with No verify
+alias gpnf="gpn --force"             # Git Push with "No verify" & "Force"
 alias gln="git pull --no-edit"       # Git puLl with No edit
 alias gpp='gln && gpn'               # Git Pull & Push
 alias gcb='echo "Git Branch: $(ak.git.getCurrentBranch) (copied)" && ak.git.copyCurrentBranch' # Git Copy Branch

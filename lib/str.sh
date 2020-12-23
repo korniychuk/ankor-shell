@@ -3,6 +3,8 @@
 #
 # Library to work with strings
 # TODO: ak.str.trim
+#       ak.str.trimLeft
+#       ak.str.trimRight
 #
 
 #
@@ -72,6 +74,8 @@ function ak.str.toUpperCase() {
 
 ##
 # Deletes final '\n' char if it exists
+# @see https://stackoverflow.com/questions/1654021
+# TODO: find better way & use universal ak.str.trimRight '\n'
 ##
 function ak.str.trimFinalNewLine() {
   perl -pe 'chomp if eof'
