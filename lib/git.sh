@@ -246,7 +246,7 @@ function ak.git.push() {
 #
 #   ak.git.uncommit 3
 #
-# Notice: in ZSH you can type 'uncomm' and press TAB and it'll be transformed to 'ak.git.uncommit'
+# Notice: in ZSH you can type '.un' and press TAB and it'll be transformed to 'ak.git.uncommit'
 #
 function ak.git.uncommit() {
   local -r count="${1:-1}"
@@ -255,10 +255,18 @@ function ak.git.uncommit() {
 }
 
 #
+# Edit the last commit message
+# Notice: in ZSH you can type '.ree' and press TAB and it'll be transformed to 'ak.git.reedit'
+#
+function ak.git.reedit() {
+  git commit --allow-empty --amend
+}
+
+#
 # Reset all uncommited changes to HEAD
 #
 function ak.git.reset() {
-    git reset --hard HEAD
+  git reset --hard HEAD
 }
 
 #
