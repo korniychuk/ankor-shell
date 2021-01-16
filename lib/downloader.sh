@@ -25,9 +25,11 @@ function ak.downloader.m3u8() {
     return 1
   fi
 
+  local _preparedUrl; _preparedUrl="$(perl -pe 's/(?<=m3u8).*$//g' <<< "$_url")"
+
   # Notice: "User Agent" is important key for many online cinema.
   ffmpeg \
     -user_agent "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit/601.7.8 (KHTML, like Gecko) Version/9.1.3 Safari/537.86.7" \
-    -i "${_url}" \
+    -i "${_preparedUrl}" \
     -c copy "${_fileName}.${_fileExt}"
 }

@@ -36,6 +36,20 @@ function ak.str.repeatn() {
 }
 
 ##
+# Replaces sub-string in a string using Perl RegExr replacement pattern.
+#
+# @output {string} String with replaced sub-string
+# TODO: test it
+#
+##
+function ak.str.replace() {
+  local _str; read -r _str; [[ -z "${_str}" ]] && _str="$1" && shift
+  local -r _regExpReplacer="${1}"
+
+  perl -0777 -pe "${_regExpReplacer}" <<< "${_str}"
+}
+
+##
 # @example 'he_llo ME wor-ld 23' -> 'HeLloMEWorLd23'
 ##
 function ak.str.toTitleCase() {
