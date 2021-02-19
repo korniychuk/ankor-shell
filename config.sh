@@ -38,6 +38,16 @@ alias gpp='gln && gpn'               # Git Pull & Push
 alias gcb='echo "Git Branch: $(ak.git.getCurrentBranch) (copied)" && ak.git.copyCurrentBranch' # Git Copy Branch
 alias akhelp="ak.sh.showConfig"
 
+alias h1='head -n 10'
+alias h='head -n 25'
+alias h5='head -n 50'
+alias h0='head -n 100'
+
+alias t1='tail -n 10'
+alias t='tail -n 25'
+alias t5='tail -n 50'
+alias t0='tail -n 100'
+
 # Inet
 alias ic="ak.inet.check; echo; ak.inet.ping.DNS"
 alias myip='echo -e "IPv4: $(ak.inet.getExternalIPv4)\nIPv6: $(ak.inet.getExternalIPv6)"'
