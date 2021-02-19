@@ -24,7 +24,9 @@ function __ak.nvm.load() {
     fi
 
     # This dir will contains node.js installations
-    export NVM_DIR="$HOME/.nvm"
+    if [[ -z "${NVM_DIR+x}" ]]; then
+      export NVM_DIR="$HOME/.nvm"
+    fi
     if [[ ! -d "${NVM_DIR}" ]]; then
       mkdir "$NVM_DIR"
     fi
