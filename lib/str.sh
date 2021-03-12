@@ -46,21 +46,21 @@ function ak.str.replace() {
   local _str; read -r _str; [[ -z "${_str}" ]] && _str="$1" && shift
   local -r _regExpReplacer="${1}"
 
-  perl -0777 -pe "${_regExpReplacer}" <<< "${_str}"
+  echo -n "$_str" | perl -0777 -pe "${_regExpReplacer}"
 }
 
 ##
 # @example 'he_llo ME wor-ld 23' -> 'HeLloMEWorLd23'
 ##
 function ak.str.toTitleCase() {
-  perl -pe 's/(^|[_\s-])(\w)/\U$2/g' <<< "$1"
+  echo -n "$1" | perl -pe 's/(^|[_\s-])(\w)/\U$2/g'
 }
 
 ##
 # @example 'he_llo ME wor-ld 23' -> 'heLloMEWorLd23'
 ##
 function ak.str.toCamelCase() {
-  perl -pe 's/([_\s-])(\w)/\U$2/g' <<< "$1"
+  echo -n "$1" | perl -pe 's/([_\s-])(\w)/\U$2/g'
 }
 
 ##
@@ -75,7 +75,7 @@ function ak.str.toKebabCase() {
 # @see the source https://stackoverflow.com/a/2264537/4843221
 ##
 function ak.str.toLowerCase() {
-  tr '[:upper:]' '[:lower:]' <<< "$1"
+  echo -n "$1" | tr '[:upper:]' '[:lower:]'
 }
 
 ##
@@ -83,7 +83,7 @@ function ak.str.toLowerCase() {
 # @see {@link ak.str.toLowerCase}
 ##
 function ak.str.toUpperCase() {
-  tr '[:lower:]' '[:upper:]' <<< "$1"
+  echo -n "$1" | tr '[:lower:]' '[:upper:]'
 }
 
 ##

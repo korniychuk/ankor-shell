@@ -24,7 +24,7 @@ function __ak.cals.loadScriptsDir() {
   local -r scriptsPath="${1}"
   local -r prefix="${2}"
   if [[ -z "${scriptsPath}" ]]; then
-    echo "ERROR! argument 'scriptsPath' is srequired" >&2
+    echo "ERROR! argument 'scriptsPath' is required" >&2
     return 1
   fi
   if [[ -z "${prefix}" ]]; then
