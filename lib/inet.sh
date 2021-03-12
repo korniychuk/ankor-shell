@@ -173,30 +173,12 @@ function __ak.inet.check.connectivity() {
 # 1. If you are going to use it with `curl` no need to do it! Use `--data-urlencode` & `-G` params for `curl`
 # 2. This function works like `encodeURIComponent` (not `encodeURI`) in JS. So, to decode use `decodeURIComponent`.
 #
-# This implementation uses just the shell, with no extra dependencies or languages.
-# Original script: https://github.com/SixArm/urlencode.sh/blob/master/urlencode.sh
+# Script source: https://stackoverflow.com/a/28055173/4843221
+# JS fn symbols list: https://stackoverflow.com/a/50943429/4843221
+# Alternative native version: https://github.com/SixArm/urlencode.sh/blob/master/urlencode.sh
 ##
-function ak.inet.urlencode() {
-    local -r raw="${1}"
-
-    local -r oldLang=$LANG
-    LANG=C
-
-    local -r oldLCCollate=LC_COLLATE
-    LC_COLLATE=C
-
-    local -r length="${#raw}"
-    local -i i
-    for (( i = 0; i < length; i++ )); do
-        local c="${raw:$i:1}"
-        case $c in
-            [a-zA-Z0-9.~_-]) printf '%s' "$c" ;;
-            *) printf '%%%02X' "'$c" ;;
-        esac
-    done
-
-    LANG=$oldLang
-    LC_COLLATE=$oldLCCollate
+function ak.inet.encodeURIComponent() {
+    echo -n "$1" | perl -0777 -pe 's/([^a-zA-Z0-9_.!~*()'\''-])/sprintf("%%%02X", ord($1))/ge'
 }
 
 ##
@@ -213,7 +195,7 @@ function ak.inet.urlencode() {
 # Original script: https://unix.stackexchange.com/a/272303
 # One more solution that doesn't work: https://github.com/SixArm/urldecode.sh/blob/master/urldecode.sh
 ##
-function ak.inet.urldecode() {
+function ak.inet.decodeURIComponent() {
     local -r encodedUrl="${1}"
 
     echo -ne "$(echo -n "${encodedUrl}" | sed -E "s/%/\\\\x/g")"
