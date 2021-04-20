@@ -29,7 +29,7 @@ alias hh='ak.sh.history'
 alias j='jobs -l'
 alias rr="rm -rf"
 alias e="exit"
-alias v="vim"
+[[ -x "$(command -v 'nvim')" ]] && alias v='nvim' || alias v='vim'
 alias vz="v ~/.zshrc"
 alias gpn="ak.git.push --no-verify"  # Git Push with No verify
 alias gpnf="gpn --force"             # Git Push with "No verify" & "Force"
