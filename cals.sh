@@ -43,7 +43,7 @@ function __ak.cals.loadScriptsDir() {
   local folderFullPath
 
   # Linking single-file commands
-  for fileFullPath in $(find "${scriptsPath}" -name "*.sh" -type f -maxdepth 1); do
+  for fileFullPath in $(find "${scriptsPath}" -maxdepth 1 -type f -name "*.sh"); do
     local fileName=$(basename "${fileFullPath%.sh}")
     local commandName="${prefix}${fileName}"
     local commandFullPath="${__AK_CALS_BINS_PATH}/${commandName}"
@@ -54,7 +54,7 @@ function __ak.cals.loadScriptsDir() {
   done
 
   # Linking folder commands
-  for folderFullPath in $(find "${scriptsPath}" -name "*" -type d -maxdepth 1); do
+  for folderFullPath in $(find "${scriptsPath}" -maxdepth 1 -type d -name "*"); do
     local fileName=$(basename "${folderFullPath}")
     local commandName="${prefix}${fileName}"
     local commandFullPath="${__AK_CALS_BINS_PATH}/${commandName}"
@@ -67,7 +67,7 @@ function __ak.cals.loadScriptsDir() {
   done
 
   # Clear old links
- for commandFullPath in $(find "${__AK_CALS_BINS_PATH}" -name "${prefix}*" -type f); do
+ for commandFullPath in $(find "${__AK_CALS_BINS_PATH}" -type f -name "${prefix}*"); do
     if ! ak.array.inArray "$(basename "${commandFullPath}")" "${commandList[@]}"; then
       rm -f "${commandFullPath}"
     fi
