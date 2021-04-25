@@ -154,3 +154,22 @@ function ak.sh.commandExists() {
 function ak.sh.showConfig() {
   cat "${AK_SCRIPT_PATH}/config.sh" | tail -n +3
 }
+
+#
+# Create a directory path and execute 'cd' to this path.
+#
+# @param {string} *dirPath relative or absolute path to the creatable directory
+#
+# @example
+#
+#   ak.sh.mkdirAndCd my/super/directory
+#
+function ak.sh.mkdirAndCd() {
+  local -r _dirPath="$1"
+  if [[ -f "$_dirPath" ]]; then
+    echo "ERROR: Path '$_dirPath' already exists and it is not a directory! Do nothing." >&2
+    return 1
+  fi
+  [[ ! -d "$_dirPath" ]] && mkdir -p "$_dirPath"
+  cd "$_dirPath" || return 2
+}

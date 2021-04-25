@@ -5,6 +5,7 @@ alias cdh="cd ~"
 alias cd..='cd ..'
 alias ..='cd ..'
 alias ...='cd ../../'
+alias mdc="ak.sh.mkdirAndCd"
 
 # fs info aliases
 if ls --color=auto &> /dev/null; then
