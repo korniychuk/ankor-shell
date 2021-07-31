@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+declare -r AK_SHELL_COLOR_Green='\033[0;32m'
+declare -r AK_SHELL_COLOR_Red='\033[0;31m'
+declare -r AK_SHELL_COLOR_BRed='\033[1;31m'
+declare -r AK_SHELL_COLOR_Yellow='\033[0;33m'
+declare -r AK_SHELL_COLOR_BYellow='\033[1;33m'
+declare -r AK_SHELL_COLOR_NC='\033[0m' # No Color
+
 #
 # TODO: Implement normalize boolean function '', 0, false, null
 #   - https://unix.stackexchange.com/questions/185670/what-is-a-best-practice-to-represent-a-boolean-value-in-a-shell-script
@@ -172,4 +179,50 @@ function ak.sh.mkdirAndCd() {
   fi
   [[ ! -d "$_dirPath" ]] && mkdir -p "$_dirPath"
   cd "$_dirPath" || return 2
+}
+
+##
+# Check the current user is root or not
+#
+# @example
+#
+#   ak.sh.isRoot && iptables -L # Notice: iptables is available only under the root
+#   ak.sh.isRoot || exit 1
+#   if ak.sh.isRoot; then ...; fi
+#
+##
+function ak.sh.isRoot() {
+  [[ "$(id -u)" -eq 0 ]] && return 0
+  return 1
+}
+
+function ak.sh.warn() {
+  local -r msg="$1"
+  echo -e "${AK_SHELL_COLOR_BYellow}Warning! ${AK_SHELL_COLOR_Yellow}${msg}${AK_SHELL_COLOR_NC}" >&2
+}
+
+function ak.sh.err() {
+  local -r msg="$1"
+  echo -e "${AK_SHELL_COLOR_BRed}ERROR: ${AK_SHELL_COLOR_Red}${msg}${AK_SHELL_COLOR_NC}" >&2
+}
+
+declare __AK_SHELL_DIE_DEFAULT_MSG="Something went wrong!"
+
+##
+# Print a red error with error code and exit script with the same error code
+#
+# @param {string} errorText
+# @param {int} [errorCode=1]
+#
+# @example
+#
+#   ak.sh.die "My Error" 123
+#
+##
+function ak.sh.die() {
+  local -r errorText="${1:-$__AK_SHELL_DIE_DEFAULT_MSG}"
+  local -r -i errorCode="${2:-1}"
+
+  echo -e "${AK_SHELL_COLOR_BRed}Die ($errorCode): ${AK_SHELL_COLOR_Red}${errorText}${AK_SHELL_COLOR_NC}" >&2
+  exit $errorCode
 }
