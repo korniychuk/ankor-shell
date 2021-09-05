@@ -5,6 +5,8 @@
 # TODO: ak.str.trim
 #       ak.str.trimLeft
 #       ak.str.trimRight
+#       ak.str.padLeft - https://unix.stackexchange.com/questions/398819/padding-trailing-whitespaces-in-a-string-with-another-character
+#       ak.str.padRight
 #
 
 #
