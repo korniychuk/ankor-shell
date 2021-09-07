@@ -9,12 +9,40 @@
 #       ak.str.padRight
 #
 
+##
+# @param {String}  [msg]
+# @param {String}  [char=-]
+# @param {Integer} [width=80]
+#
+# @stdout {String} Centrated `msg` padded by `char` to rich `width`
+#
+# @example:
+#
+#   > ak.str.header 'Hello, world!'
+#   # --------------------------------- Hello, world! --------------------------------
+#
+##
+function ak.str.header() {
+  local -r msg="$1"
+  local -r char="${2:--}"
+  local -r -i width=${3:-80}
+
+  local -r -i msgLen=$(( ${#msg} + 2 ))
+  local -r -i lineLen=$(( (width - msgLen) / 2 ))
+  local -r lineAfter="$(printf -- "${char}%.0s" $(eval "echo {1..$lineLen}"))"
+  local -r lineBefore="$lineAfter$([[ $(((width - msgLen) % 2 )) -ge 1 ]] && echo "$char")"
+
+  echo  "$lineBefore $msg $lineAfter"
+}
+
 #
 # Repeat a string N times
 # @param {string}  str   a string
 # @param {integer} times how many times to repeat
 # @returns {string} repeated string
 #
+# @see https://stackoverflow.com/a/5349842/4843221
+# @see https://github.com/koalaman/shellcheck/wiki/SC2051#rationale
 # @example
 #
 #  ak.str.repeat "-" # repeats "-" 80 times
