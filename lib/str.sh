@@ -36,6 +36,14 @@ function ak.str.header() {
 }
 
 ##
+# See {@link ak.str.repeat} + adds a linebreak
+##
+function ak.str.headern() {
+  ak.str.header "$@"
+  echo
+}
+
+##
 # Repeat a string N times
 
 # @param {string}  str   a string
@@ -60,7 +68,7 @@ function ak.str.repeat() {
 }
 
 ##
-# See {@link ak.str.repeat}
+# See {@link ak.str.repeat} + adds a linebreak
 ##
 function ak.str.repeatn() {
   ak.str.repeat "${@}"
