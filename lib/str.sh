@@ -35,14 +35,16 @@ function ak.str.header() {
   echo  "$lineBefore $msg $lineAfter"
 }
 
-#
+##
 # Repeat a string N times
+
 # @param {string}  str   a string
 # @param {integer} times how many times to repeat
-# @returns {string} repeated string
 #
+# @output {string} repeated string
 # @see https://stackoverflow.com/a/5349842/4843221
 # @see https://github.com/koalaman/shellcheck/wiki/SC2051#rationale
+#
 # @example
 #
 #  ak.str.repeat "-" # repeats "-" 80 times
@@ -57,9 +59,9 @@ function ak.str.repeat() {
   fi
 }
 
-#
+##
 # See {@link ak.str.repeat}
-#
+##
 function ak.str.repeatn() {
   ak.str.repeat "${@}"
   echo
