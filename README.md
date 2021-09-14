@@ -23,3 +23,9 @@ source "${AK_SCRIPT_PATH}/cals.sh"
 #### Helpful links
 
 * https://github.com/bashup
+* https://github.com/vlisivka/bash-modules - an interesting bash project that implements:
+  - modules
+  - log functions with colorized output
+  - panic fn
+  - strict mode
+  - error handling
