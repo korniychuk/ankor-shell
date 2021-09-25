@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 declare -r AK_SHELL_COLOR_Green='\033[0;32m'
+declare -r AK_SHELL_COLOR_BGreen='\033[1;32m'
 declare -r AK_SHELL_COLOR_Red='\033[0;31m'
 declare -r AK_SHELL_COLOR_BRed='\033[1;31m'
 declare -r AK_SHELL_COLOR_Yellow='\033[0;33m'

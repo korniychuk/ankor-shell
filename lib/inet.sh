@@ -25,7 +25,7 @@ function ak.inet.serve() {
 }
 
 ##
- # Show listening on the local machine ports and PIDs of processes
+ # Show listening on the local machine TCP ports and PIDs of processes
  # TODO: implement the way to run without sudo
  #
  # @param {integer} [port=] Port number, if you want to find only one specific application
