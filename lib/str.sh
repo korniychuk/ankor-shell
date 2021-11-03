@@ -111,6 +111,13 @@ function ak.str.toKebabCase() {
 }
 
 ##
+# @example 'he_llo ME wor-ld 23' -> 'HE_LLO_ME_WOR_LD_23'
+##
+function ak.str.toMacroCase() {
+  ak.str.toUpperCase "$1" | perl -pe 's/([_\s-])(\w)/_$2/g'
+}
+
+##
 # @example 'he_llo ME wor-ld 23' -> 'he_llo me wor-ld 23'
 # @see the source https://stackoverflow.com/a/2264537/4843221
 ##
