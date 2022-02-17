@@ -101,6 +101,7 @@ function node() { __ak.nvm.load node "$@"; }
 function npm()  { __ak.nvm.load npm  "$@"; }
 function npx()  { __ak.nvm.load npx  "$@"; }
 function ng()   { __ak.nvm.load ng   "$@"; }
+function nx()   { __ak.nvm.load nx   "$@"; }
 function nest() { __ak.nvm.load nest "$@"; }
 function yarn() { __ak.nvm.load yarn "$@"; }
 
