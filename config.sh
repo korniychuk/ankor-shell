@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# variables
+export PATH="$PATH:$HOME/.bin"
+
 # cd aliases
 alias cdh="cd ~"
 alias cd..='cd ..'
