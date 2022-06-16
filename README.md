@@ -29,6 +29,7 @@ git clone git@github.com:korniychuk/ankor-shell_custom-scripts.git custom-script
 
 #### Helpful links
 
+* ASCII - https://patorjk.com/software/taag/#p=display&h=1&f=3D-ASCII&t=ankor-shell
 * https://github.com/bashup
 * https://github.com/vlisivka/bash-modules - an interesting bash project that implements:
   - modules
