@@ -20,7 +20,12 @@ fi
 alias l="ls -lhF"
 alias ll="ls -lhAF"
 alias l.="ls -lhAFd .*" # shows only hidden files (started from .)
-alias duof='du --max-depth=1 -h'
+
+if [[ -x "$(command -v 'gdu')" ]]; then
+  alias duof='gdu --max-depth=1 -h'
+else
+  alias duof='du --max-depth=1 -h'
+fi
 
 # Search
 alias f='find . -iname'
