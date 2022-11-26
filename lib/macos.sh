@@ -410,3 +410,36 @@ function ak.macos.openFinderAndSelectItem() {
 
   return 0
 }
+
+##
+# Human-readable vm_stat with 1sec auto redraw
+# Helpful links:
+# - https://github.com/nickdowell/vm_info
+# - https://github.com/flaviopace/MacOSX_free_bash_command/blob/master/src/vm_free.sh
+# - https://apple.stackexchange.com/questions/202744/what-is-memory-pressure-and-how-do-i-relieve-it
+# - https://apple.stackexchange.com/questions/67031/isnt-inactive-memory-a-waste-of-resources
+# - https://apple.stackexchange.com/questions/31801/what-is-wired-memory
+# - https://stackoverflow.com/questions/13024087/what-are-memory-mapped-page-and-anonymous-page
+##
+function ak.macos.vm_stat() {
+  local -i mult=1024
+  local -i pageSize="$(pagesize)"
+
+  vm_stat | head -n 1
+  printf "%-30s%10s%15s\n" "Metric" "GiB" "Pages"
+  printf -- '=%.0s' {1..55}
+  echo
+
+  while true; do
+    local stat="$(vm_stat)"
+    local -i count="$(echo "$stat" | tail +2 | wc -l)"
+
+    echo "$stat" | tail +2 | while read -r line; do
+    echo "$line" | awk -F '[:.]' '{sum=$2} END {res=sum*'"$pageSize/$mult/$mult/$mult"'} END { printf("%-30s%10.3f%15d\n", $1":", res, $2) }'
+    done
+
+    sleep 1
+    echo -n -e '\033[K\033['"$count"'A'
+  done
+}
+
