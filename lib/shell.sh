@@ -229,6 +229,48 @@ function ak.sh.die() {
 }
 
 ##
+# Usage: command | ak.sh.debounce -t [time_interval_ms=500] -c [command='cat -']
+#
+# Example: command | ak.sh.debounce
+# Example: command | ak.sh.debounce -t 2000 -c 'sort -u -r -'
+##
+function ak.sh.debounce() {
+    # Get the time interval and command arguments
+    local -i _time_interval_ms=500
+    _command='cat -'
+
+    while getopts ":t:c:" _opt; do
+      case $_opt in
+        t) _time_interval_ms="$OPTARG"
+        ;;
+        c) _command="$OPTARG"
+        ;;
+        \?) echo "Invalid option -$OPTARG" >&2
+        ;;
+      esac
+    done
+
+    local -a _buffer=()
+    local -a _output=()
+
+    local _start_ms; _start_ms=$(ak.dt.now.ms)
+    while IFS= read -r line; do
+        _buffer+=("$line")
+
+        _end_ms=$(ak.dt.now.ms)
+        _diff_ms=$((_end_ms - _start_ms))
+
+        if (( _diff_ms >= _time_interval_ms )); then
+            _output=("${_buffer[@]}")
+            _buffer=()
+
+            printf "%s\n" "${_output[@]}" | eval "$_command"
+            _start_ms=$(ak.dt.now.ms)
+        fi
+    done
+}
+
+##
 # Test all features that a terminal should support
 # @See https://hellricer.github.io/2019/10/05/test-drive-your-terminal.html
 ##
