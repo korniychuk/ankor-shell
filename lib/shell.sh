@@ -268,6 +268,9 @@ function ak.sh.debounce() {
             _start_ms=$(ak.dt.now.ms)
         fi
     done
+
+    # print the rest of the buffer, if stdin is finished
+    printf "%s\n" "${_buffer[@]}" | eval "$_command"
 }
 
 ##
