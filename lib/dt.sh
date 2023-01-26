@@ -118,6 +118,17 @@ function ak.dt.now.timestamp() {
 }
 
 #
+# Current timestamp it milliseconds
+#
+# Notes:
+#   - always in UTC (no time zone)
+#
+function ak.dt.now.ms() {
+  # %N - nano-seconds part of the current second
+  echo -n $(( $(__ak.dt.gdate "+%s%N") / 1000000 ))
+}
+
+#
 # Date in ISO 8601 format. Example: `2006-08-14T02:34:56-06:00`
 #
 function ak.dt.now.iso() {
