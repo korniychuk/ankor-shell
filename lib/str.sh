@@ -79,12 +79,27 @@ function ak.str.repeatn() {
 # Replaces sub-string in a string using Perl RegExr replacement pattern.
 #
 # @output {string} String with replaced sub-string
-# TODO: test it
+#
+# @example
+#
+#   ak.str.replace "Hello My World" "s/ /:/g"
+#   echo "Hello My World" | ak.str.replace "s/ /:/g"
 #
 ##
 function ak.str.replace() {
-  local _str; read -r _str; [[ -z "${_str}" ]] && _str="$1" && shift
-  local -r _regExpReplacer="${1}"
+  local _str
+  local _regExpReplacer
+
+  if [[ $# -eq 2 ]]; then
+    _str="${1}"
+    _regExpReplacer="${2}"
+  elif [[ $# -eq 1 ]]; then
+    _str=$(cat)
+    _regExpReplacer="${1}"
+  else
+    echo "Invalid number of arguments. Usage: ak.str.replace [source_string] regex_pattern"
+    return 1
+  fi
 
   echo -n "$_str" | perl -0777 -pe "${_regExpReplacer}"
 }
