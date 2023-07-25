@@ -164,9 +164,9 @@ function ak.sh.history() {
 #   fi
 #
 function ak.sh.commandExists() {
-  local -r command="${1}";
+  local -r __command="${1}";
 
-  if [[ ! -x "$(command -v "${command}")" ]]; then
+  if ! command -v "$__command" > /dev/null; then
     false
   fi
 }

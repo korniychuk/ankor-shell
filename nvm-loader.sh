@@ -18,7 +18,7 @@ function __ak.nvm.load() {
 
   # 1. parse first arg
   local command="$1"; shift
-  unset -f nvm node npm npx ng nest yarn # DELETE temporary loader function
+  unset -f nvm node npm npx ng nest yarn nx # DELETE temporary loader function
 
   if [[ "${command}" == "automatically" ]]; then
     echo "${__ak_nvm_msgPrefix} .nvmrc found --> Loading NVM ..."
@@ -110,12 +110,13 @@ function ak.nvm.version() {
 
   if ak.sh.commandExists node; then
     # shellcheck disable=2154
-    echo -en "\r${cursorToPreviousLine}${__ak_nvm_msgPrefix} ${AK_SHELL_COLOR_BGreen}Loaded${AK_SHELL_COLOR_NC} --> "
-    echo -en "node: ${AK_SHELL_COLOR_BRed}$(node --version)${AK_SHELL_COLOR_NC}${nvmRcInfo}"
-    echo -en "   npm: ${AK_SHELL_COLOR_BRed}$(npm --version)${AK_SHELL_COLOR_NC}"
-    echo -en "   nvm: ${AK_SHELL_COLOR_BRed}$(nvm --version)${AK_SHELL_COLOR_NC}"
+    echo -en "\r${cursorToPreviousLine}${__ak_nvm_msgPrefix} ${AK_SHELL_COLOR_BGreen}OK${AK_SHELL_COLOR_NC} → "
+    # shellcheck disable=2154
+    echo -en "node: ${AK_SHELL_COLOR_BBlue}$(node --version)${AK_SHELL_COLOR_NC}${nvmRcInfo}"
+    echo -en "   npm: ${AK_SHELL_COLOR_BBlue}$(npm --version)${AK_SHELL_COLOR_NC}"
+    echo -en "   nvm: ${AK_SHELL_COLOR_BBlue}$(nvm --version)${AK_SHELL_COLOR_NC}"
     if ak.sh.commandExists yarn; then
-      echo -en "   yarn: ${AK_SHELL_COLOR_BRed}$(yarn --version)${AK_SHELL_COLOR_NC}"
+      echo -en "   yarn: ${AK_SHELL_COLOR_BBlue}$(yarn --version)${AK_SHELL_COLOR_NC}"
     else
       echo -en "   yarn: ${AK_SHELL_COLOR_BRed}NO${AK_SHELL_COLOR_NC}"
     fi
@@ -132,6 +133,6 @@ function npx()  { __ak.nvm.load npx  "$@"; }
 function ng()   { __ak.nvm.load ng   "$@"; }
 function nest() { __ak.nvm.load nest "$@"; }
 function yarn() { __ak.nvm.load yarn "$@"; }
-# TODO: try to use `nx` here again after the refactoring
+function nx()   { __ak.nvm.load nx   "$@"; }
 
 __ak.nvm.autoloadNvmRc
