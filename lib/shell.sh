@@ -197,6 +197,11 @@ function ak.sh.isRoot() {
   return 1
 }
 
+function ak.sh.ok() {
+  local -r msg="$1"
+  echo -e "${AK_SHELL_COLOR_BGreen}[OK] ${AK_SHELL_COLOR_Green}${msg}${AK_SHELL_COLOR_NC}" >&2
+}
+
 function ak.sh.warn() {
   local -r msg="$1"
   echo -e "${AK_SHELL_COLOR_BYellow}Warning! ${AK_SHELL_COLOR_Yellow}${msg}${AK_SHELL_COLOR_NC}" >&2
