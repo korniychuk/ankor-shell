@@ -43,7 +43,10 @@ function __ak.nvm.load() {
 
   # 3. load .nvmrc from the current working directory in case it exists
   if [[ -f "$PWD/.nvmrc" ]]; then
-    local __out; __out=$(nvm use 2>&1); local -i __ret=$?
+    local tmpfile=$(mktemp)
+    nvm use &>"$tmpfile"; local -i __ret=$?
+    local __out=$(<"$tmpfile")
+    rm "$tmpfile"
 
     if ((__ret == 0)); then
       ak.nvm.version 1
@@ -83,6 +86,7 @@ function __ak.nvm.load() {
   # 5. Execute the command
   [[ "$command" == 'automatically' ]] && return 0
   if ak.sh.commandExists "$command"; then
+    echo
     "${command}" "$@"
   else
     ak.sh.err "Can't find command '$command'"
@@ -99,8 +103,6 @@ function __ak.nvm.autoloadNvmRc() {
 function ak.nvm.version() {
   local isNvmRcUsed="${1:-unknown}"
 
-  local cursorToPreviousLine='\e[1A'
-
   local nvmRcInfo=''
   if [[ "${isNvmRcUsed}" == "1" ]]; then
     nvmRcInfo=' (From .nvmrc)'
@@ -110,9 +112,9 @@ function ak.nvm.version() {
 
   if ak.sh.commandExists node; then
     # shellcheck disable=2154
-    echo -en "\r${cursorToPreviousLine}${__ak_nvm_msgPrefix} ${AK_SHELL_COLOR_BGreen}OK${AK_SHELL_COLOR_NC} → "
+    echo -en "\r${AK_SHELL_CURSOR_UP}${__ak_nvm_msgPrefix} ${AK_SHELL_COLOR_BGreen}OK${AK_SHELL_COLOR_NC} → "
     # shellcheck disable=2154
-    echo -en "node: ${AK_SHELL_COLOR_BBlue}$(node --version)${AK_SHELL_COLOR_NC}${nvmRcInfo}"
+    echo -en "node: ${AK_SHELL_COLOR_BBlue}$(node --version)${AK_SHELL_COLOR_Gray}${nvmRcInfo}${AK_SHELL_COLOR_NC}"
     echo -en "   npm: ${AK_SHELL_COLOR_BBlue}$(npm --version)${AK_SHELL_COLOR_NC}"
     echo -en "   nvm: ${AK_SHELL_COLOR_BBlue}$(nvm --version)${AK_SHELL_COLOR_NC}"
     if ak.sh.commandExists yarn; then
@@ -122,7 +124,7 @@ function ak.nvm.version() {
     fi
     echo
   else
-    echo -e "${cursorToPreviousLine}${__ak_nvm_msgPrefix} ${AK_SHELL_COLOR_BRed}Can not load NodeJS${AK_SHELL_COLOR_NC}" >&2
+    echo -e "${AK_SHELL_CURSOR_UP}${__ak_nvm_msgPrefix} ${AK_SHELL_COLOR_BRed}Can not load NodeJS${AK_SHELL_COLOR_NC}" >&2
   fi
 }
 
@@ -136,3 +138,4 @@ function yarn() { __ak.nvm.load yarn "$@"; }
 function nx()   { __ak.nvm.load nx   "$@"; }
 
 __ak.nvm.autoloadNvmRc
+
