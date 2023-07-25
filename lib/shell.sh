@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
 
-export -r AK_SHELL_COLOR_Green='\033[0;32m'
-export -r AK_SHELL_COLOR_BGreen='\033[1;32m'
-export -r AK_SHELL_COLOR_Red='\033[0;31m'
-export -r AK_SHELL_COLOR_BRed='\033[1;31m'
-export -r AK_SHELL_COLOR_Yellow='\033[0;33m'
-export -r AK_SHELL_COLOR_BYellow='\033[1;33m'
+export -r AK_COLOR_Green='\033[0;32m'
+export -r AK_COLOR_BGreen='\033[1;32m'
+export -r AK_COLOR_Red='\033[0;31m'
+export -r AK_COLOR_BRed='\033[1;31m'
+export -r AK_COLOR_Yellow='\033[0;33m'
+export -r AK_COLOR_BYellow='\033[1;33m'
 
-export -r AK_SHELL_COLOR_Blue='\033[0;34m'
-export -r AK_SHELL_COLOR_BBlue='\033[1;34m'
-export -r AK_SHELL_COLOR_Magenta='\033[0;35m'
-export -r AK_SHELL_COLOR_BMagenta='\033[1;35m'
-export -r AK_SHELL_COLOR_Cyan='\033[0;36m'
-export -r AK_SHELL_COLOR_BCyan='\033[1;36m'
-export -r AK_SHELL_COLOR_White='\033[0;37m'
-export -r AK_SHELL_COLOR_BWhite='\033[1;37m'
-export -r AK_SHELL_COLOR_Gray='\033[0;90m'
-export -r AK_SHELL_COLOR_BGray='\033[1;90m'
+export -r AK_COLOR_Blue='\033[0;34m'
+export -r AK_COLOR_BBlue='\033[1;34m'
+export -r AK_COLOR_Magenta='\033[0;35m'
+export -r AK_COLOR_BMagenta='\033[1;35m'
+export -r AK_COLOR_Cyan='\033[0;36m'
+export -r AK_COLOR_BCyan='\033[1;36m'
+export -r AK_COLOR_White='\033[0;37m'
+export -r AK_COLOR_BWhite='\033[1;37m'
+export -r AK_COLOR_Gray='\033[0;90m'
+export -r AK_COLOR_BGray='\033[1;90m'
 
-export -r AK_SHELL_COLOR_NC='\033[0m' # No Color
+export -r AK_COLOR_NC='\033[0m' # No Color
 export -r AK_SHELL_CURSOR_UP='\e[1A' # Move cursor to the previous line
 #
 # TODO: Implement normalize boolean function '', 0, false, null
@@ -211,17 +211,17 @@ function ak.sh.isRoot() {
 
 function ak.sh.ok() {
   local -r msg="$1"
-  echo -e "${AK_SHELL_COLOR_BGreen}[OK] ${AK_SHELL_COLOR_Green}${msg}${AK_SHELL_COLOR_NC}" >&2
+  echo -e "${AK_COLOR_BGreen}[OK] ${AK_COLOR_Green}${msg}${AK_COLOR_NC}" >&2
 }
 
 function ak.sh.warn() {
   local -r msg="$1"
-  echo -e "${AK_SHELL_COLOR_BYellow}Warning! ${AK_SHELL_COLOR_Yellow}${msg}${AK_SHELL_COLOR_NC}" >&2
+  echo -e "${AK_COLOR_BYellow}Warning! ${AK_COLOR_Yellow}${msg}${AK_COLOR_NC}" >&2
 }
 
 function ak.sh.err() {
   local -r msg="$1"
-  echo -e "${AK_SHELL_COLOR_BRed}ERROR: ${AK_SHELL_COLOR_Red}${msg}${AK_SHELL_COLOR_NC}" >&2
+  echo -e "${AK_COLOR_BRed}ERROR: ${AK_COLOR_Red}${msg}${AK_COLOR_NC}" >&2
 }
 
 declare __AK_SHELL_DIE_DEFAULT_MSG="Something went wrong!"
@@ -241,7 +241,7 @@ function ak.sh.die() {
   local -r errorText="${1:-$__AK_SHELL_DIE_DEFAULT_MSG}"
   local -r -i errorCode="${2:-1}"
 
-  echo -e "${AK_SHELL_COLOR_BRed}Die ($errorCode): ${AK_SHELL_COLOR_Red}${errorText}${AK_SHELL_COLOR_NC}" >&2
+  echo -e "${AK_COLOR_BRed}Die ($errorCode): ${AK_COLOR_Red}${errorText}${AK_COLOR_NC}" >&2
   exit $errorCode
 }
 

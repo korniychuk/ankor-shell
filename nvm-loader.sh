@@ -55,7 +55,7 @@ function __ak.nvm.load() {
       local __err=$(echo -n "$__out" | grep -F 'N/A');
       [[ -n "$__msg" ]] && echo "$__msg"
       # shellcheck disable=2154
-      [[ -n "$__err" ]] && echo -e "${AK_SHELL_COLOR_BRed}${__err}${AK_SHELL_COLOR_NC}" >&2
+      [[ -n "$__err" ]] && echo -e "${AK_COLOR_BRed}${__err}${AK_COLOR_NC}" >&2
       echo
 
       if [[ "$command" == 'automatically' ]]; then
@@ -63,7 +63,7 @@ function __ak.nvm.load() {
         return 2
       else
       # shellcheck disable=2154
-        echo -e "${AK_SHELL_COLOR_Yellow}Installing ...${AK_SHELL_COLOR_NC}"
+        echo -e "${AK_COLOR_Yellow}Installing ...${AK_COLOR_NC}"
         nvm install
       fi
 
@@ -112,19 +112,19 @@ function ak.nvm.version() {
 
   if ak.sh.commandExists node; then
     # shellcheck disable=2154
-    echo -en "\r${AK_SHELL_CURSOR_UP}${__ak_nvm_msgPrefix} ${AK_SHELL_COLOR_BGreen}OK${AK_SHELL_COLOR_NC} → "
+    echo -en "\r${AK_SHELL_CURSOR_UP}${__ak_nvm_msgPrefix} ${AK_COLOR_BGreen}OK${AK_COLOR_NC} → "
     # shellcheck disable=2154
-    echo -en "node: ${AK_SHELL_COLOR_BBlue}$(node --version)${AK_SHELL_COLOR_Gray}${nvmRcInfo}${AK_SHELL_COLOR_NC}"
-    echo -en "   npm: ${AK_SHELL_COLOR_BBlue}$(npm --version)${AK_SHELL_COLOR_NC}"
-    echo -en "   nvm: ${AK_SHELL_COLOR_BBlue}$(nvm --version)${AK_SHELL_COLOR_NC}"
+    echo -en "node: ${AK_COLOR_BBlue}$(node --version)${AK_COLOR_Gray}${nvmRcInfo}${AK_COLOR_NC}"
+    echo -en "   npm: ${AK_COLOR_BBlue}$(npm --version)${AK_COLOR_NC}"
+    echo -en "   nvm: ${AK_COLOR_BBlue}$(nvm --version)${AK_COLOR_NC}"
     if ak.sh.commandExists yarn; then
-      echo -en "   yarn: ${AK_SHELL_COLOR_BBlue}$(yarn --version)${AK_SHELL_COLOR_NC}"
+      echo -en "   yarn: ${AK_COLOR_BBlue}$(yarn --version)${AK_COLOR_NC}"
     else
-      echo -en "   yarn: ${AK_SHELL_COLOR_BRed}NO${AK_SHELL_COLOR_NC}"
+      echo -en "   yarn: ${AK_COLOR_BRed}NO${AK_COLOR_NC}"
     fi
     echo
   else
-    echo -e "${AK_SHELL_CURSOR_UP}${__ak_nvm_msgPrefix} ${AK_SHELL_COLOR_BRed}Can not load NodeJS${AK_SHELL_COLOR_NC}" >&2
+    echo -e "${AK_SHELL_CURSOR_UP}${__ak_nvm_msgPrefix} ${AK_COLOR_BRed}Can not load NodeJS${AK_COLOR_NC}" >&2
   fi
 }
 
