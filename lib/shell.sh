@@ -1,13 +1,25 @@
 #!/usr/bin/env bash
 
-declare -r AK_SHELL_COLOR_Green='\033[0;32m'
-declare -r AK_SHELL_COLOR_BGreen='\033[1;32m'
-declare -r AK_SHELL_COLOR_Red='\033[0;31m'
-declare -r AK_SHELL_COLOR_BRed='\033[1;31m'
-declare -r AK_SHELL_COLOR_Yellow='\033[0;33m'
-declare -r AK_SHELL_COLOR_BYellow='\033[1;33m'
-declare -r AK_SHELL_COLOR_NC='\033[0m' # No Color
+export -r AK_SHELL_COLOR_Green='\033[0;32m'
+export -r AK_SHELL_COLOR_BGreen='\033[1;32m'
+export -r AK_SHELL_COLOR_Red='\033[0;31m'
+export -r AK_SHELL_COLOR_BRed='\033[1;31m'
+export -r AK_SHELL_COLOR_Yellow='\033[0;33m'
+export -r AK_SHELL_COLOR_BYellow='\033[1;33m'
 
+export -r AK_SHELL_COLOR_Blue='\033[0;34m'
+export -r AK_SHELL_COLOR_BBlue='\033[1;34m'
+export -r AK_SHELL_COLOR_Magenta='\033[0;35m'
+export -r AK_SHELL_COLOR_BMagenta='\033[1;35m'
+export -r AK_SHELL_COLOR_Cyan='\033[0;36m'
+export -r AK_SHELL_COLOR_BCyan='\033[1;36m'
+export -r AK_SHELL_COLOR_White='\033[0;37m'
+export -r AK_SHELL_COLOR_BWhite='\033[1;37m'
+export -r AK_SHELL_COLOR_Gray='\033[0;90m'
+export -r AK_SHELL_COLOR_BGray='\033[1;90m'
+
+export -r AK_SHELL_COLOR_NC='\033[0m' # No Color
+export -r AK_SHELL_CURSOR_UP='\e[1A' # Move cursor to the previous line
 #
 # TODO: Implement normalize boolean function '', 0, false, null
 #   - https://unix.stackexchange.com/questions/185670/what-is-a-best-practice-to-represent-a-boolean-value-in-a-shell-script
