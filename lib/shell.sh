@@ -246,6 +246,22 @@ function ak.sh.die() {
 }
 
 ##
+# Checks if the current shell is interactive.
+# Returns true when shell options include 'i' and $PS1 is not empty.
+#
+# @example
+#
+#   if ak.sh.isInteractive; then
+#     echo "Interactive shell."
+#   else
+#     echo "Non-interactive shell."
+#   fi
+##
+function ak.sh.isInteractive() {
+  return [[ $- == *i* ]] && [ -n "$PS1" ]
+}
+
+##
 # Debounces & groups input from stdin during specified time interval.
 # Then, transforms the grouped input, executes a command from `-c` argument and passes the grouped input to the command.
 #
