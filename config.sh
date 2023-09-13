@@ -5,9 +5,12 @@ export PATH="$PATH:$HOME/.local/bin"
 
 # cd aliases
 alias cdh="cd ~"
+alias cdhd="cd ~/Downloads"
 alias cd..='cd ..'
 alias ..='cd ..'
 alias ...='cd ../../'
+alias ....='cd ../../../'
+alias .....='cd ../../../../'
 alias mdc="ak.sh.mkdirAndCd"
 
 # fs info aliases
