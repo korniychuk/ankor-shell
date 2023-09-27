@@ -282,7 +282,7 @@ function ak.sh.debounce() {
 # Test all features that a terminal should support
 # @See https://hellricer.github.io/2019/10/05/test-drive-your-terminal.html
 ##
-ak.sh.test-drive() {
+function ak.sh.test-drive() {
   echo "# 24-bit (true-color)"
   # based on: https://gist.github.com/XVilka/8346728
   term_cols="$(tput cols || echo 80)"
