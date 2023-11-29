@@ -5,12 +5,10 @@
 # Works faster then via brew
 # http://broken-by.me/lazy-load-nvm/
 # https://www.reddit.com/r/node/comments/4tg5jg/lazy_load_nvm_for_faster_shell_start/d5ib9fs/
-# [ -s _PREFIX/nvm.sh" ] && \. _PREFIX/nvm.sh"  # This loads nvm
-# [ -s _PREFIX/bash_completion" ] && \. _PREFIX/bash_completion"  # This loads nvm bash_completion
 ##
 
 export __ak_nl_isLoaded=0
-export __ak_nl_msgPrefix='NVM Loader:'
+export __ak_nl_msgPrefix='Node Loader:'
 function __ak.node-loader.load() {
   # 0. fuse - first fn execution
   [[ "$__ak_nl_isLoaded" != "0" ]] && return 0
@@ -21,7 +19,7 @@ function __ak.node-loader.load() {
   unset -f node npm npx ng nest yarn nx # DELETE temporary loader function
 
   if [[ "${command}" == "automatically" ]]; then
-    echo "${__ak_nl_msgPrefix} local env found --> Loading NVM ..."
+    echo "${__ak_nl_msgPrefix} local env found --> Loading Node Version ..."
   else
     echo "${__ak_nl_msgPrefix} Loading latest (offline) ..."
   fi
@@ -81,20 +79,20 @@ function __ak.node-loader.autoload() {
 }
 
 function ak.node-loader.version() {
-  local isNvmRcUsed="${1:-unknown}"
+  local isLocal="${1:-unknown}"
 
-  local nvmRcInfo=''
-  if [[ "${isNvmRcUsed}" == "1" ]]; then
-    nvmRcInfo=' (from local)'
-  elif [[ "${isNvmRcUsed}" == "0" ]]; then
-    nvmRcInfo=' (default)'
+  local info=''
+  if [[ "${isLocal}" == "1" ]]; then
+    info=' (from local)'
+  elif [[ "${isLocal}" == "0" ]]; then
+    info=' (default)'
   fi
 
   if ak.sh.commandExists node; then
     # shellcheck disable=2154
     echo -en "\r${AK_SHELL_CURSOR_UP}${__ak_nl_msgPrefix} ${AK_COLOR_BGreen}OK${AK_COLOR_NC} → "
     # shellcheck disable=2154
-    echo -en "node: ${AK_COLOR_BBlue}$(node --version)${AK_COLOR_Gray}${nvmRcInfo}${AK_COLOR_NC}"
+    echo -en "node: ${AK_COLOR_BBlue}$(node --version)${AK_COLOR_Gray}${info}${AK_COLOR_NC}"
     echo -en "   npm: ${AK_COLOR_BBlue}$(npm --version)${AK_COLOR_NC}"
     echo -en "   n: ${AK_COLOR_BBlue}$(n --version)${AK_COLOR_NC}"
     if ak.sh.commandExists yarn; then
