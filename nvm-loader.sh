@@ -32,6 +32,13 @@ function __ak.node-loader.load() {
     mkdir "$N_PREFIX"
   fi
 
+  # 3. Check 'node' command exists
+  if ! ak.sh.commandExists n; then
+    ak.sh.err "The N (Node Version Manager) isn't installed"
+    return 1
+  fi
+
+  # 4. Load Node
   if [[ "${command}" == "automatically" ]]; then
     n auto > /dev/null 2>&1
     ak.node-loader.version 1
@@ -40,13 +47,13 @@ function __ak.node-loader.load() {
     ak.node-loader.version 0
   fi
 
-  # 4. Check 'node' command exists
+  # 5. Check 'node' command exists
   if ! ak.sh.commandExists node; then
     ak.sh.err "Loader is finished its work, but the 'node' CLI command is still absent"
     return 1
   fi
 
-  # 5. Execute the command
+  # 6. Execute the command
   [[ "$command" == 'automatically' ]] && return 0
   if ak.sh.commandExists "$command"; then
     echo
