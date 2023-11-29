@@ -35,7 +35,9 @@ function __ak.cals.loadScriptsDir() {
     mkdir -p "${scriptsPath}"
   fi
 
-  PATH="${PATH}:${__AK_CALS_BINS_PATH}"
+  if [[ ":$PATH:" != *":${__AK_CALS_BINS_PATH}:"* ]]; then
+    PATH="${PATH}:${__AK_CALS_BINS_PATH}"
+  fi
 
   local -a commandList=()
   local commandFullPath
