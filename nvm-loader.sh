@@ -9,21 +9,21 @@
 # [ -s _PREFIX/bash_completion" ] && \. _PREFIX/bash_completion"  # This loads nvm bash_completion
 ##
 
-export __ak_nvm_isLoaded=0
-export __ak_nvm_msgPrefix='NVM Loader:'
-function __ak.nvm.load() {
+export __ak_nl_isLoaded=0
+export __ak_nl_msgPrefix='NVM Loader:'
+function __ak.node-loader.load() {
   # 0. fuse - first fn execution
-  [[ "$__ak_nvm_isLoaded" != "0" ]] && return 0
-  export __ak_nvm_isLoaded=1
+  [[ "$__ak_nl_isLoaded" != "0" ]] && return 0
+  export __ak_nl_isLoaded=1
 
   # 1. parse first arg
   local command="$1"; shift
   unset -f node npm npx ng nest yarn nx # DELETE temporary loader function
 
   if [[ "${command}" == "automatically" ]]; then
-    echo "${__ak_nvm_msgPrefix} local env found --> Loading NVM ..."
+    echo "${__ak_nl_msgPrefix} local env found --> Loading NVM ..."
   else
-    echo "${__ak_nvm_msgPrefix} Loading latest (offline) ..."
+    echo "${__ak_nl_msgPrefix} Loading latest (offline) ..."
   fi
 
   # 2. This dir will contains node.js installations
@@ -36,10 +36,10 @@ function __ak.nvm.load() {
 
   if [[ "${command}" == "automatically" ]]; then
     n auto > /dev/null 2>&1
-    ak.nvm.version 1
+    ak.node-loader.version 1
   else
     n latest --offline > /dev/null 2>&1
-    ak.nvm.version 0
+    ak.node-loader.version 0
   fi
 
   # 4. Check 'node' command exists
@@ -65,14 +65,14 @@ function __ak.nvm.load() {
  # .nvmrc
  # package.json (with '"engines":' code fragment)
 ##
-function __ak.nvm.autoloadNvmRc() {
+function __ak.node-loader.autoload() {
   local current_dir="$PWD"
   while [[ "$current_dir" != "/" ]]; do
     if [[ -f "$current_dir/.n-node-version" ]] || \
        [[ -f "$current_dir/.node-version" ]] || \
        [[ -f "$current_dir/.nvmrc" ]] || \
        ( [[ -f "$current_dir/package.json" ]] && grep -q '"engines":' "$current_dir/package.json" ); then
-      __ak.nvm.load 'automatically'
+      __ak.node-loader.load 'automatically'
       return 0
     fi
 
@@ -80,7 +80,7 @@ function __ak.nvm.autoloadNvmRc() {
   done
 }
 
-function ak.nvm.version() {
+function ak.node-loader.version() {
   local isNvmRcUsed="${1:-unknown}"
 
   local nvmRcInfo=''
@@ -92,7 +92,7 @@ function ak.nvm.version() {
 
   if ak.sh.commandExists node; then
     # shellcheck disable=2154
-    echo -en "\r${AK_SHELL_CURSOR_UP}${__ak_nvm_msgPrefix} ${AK_COLOR_BGreen}OK${AK_COLOR_NC} → "
+    echo -en "\r${AK_SHELL_CURSOR_UP}${__ak_nl_msgPrefix} ${AK_COLOR_BGreen}OK${AK_COLOR_NC} → "
     # shellcheck disable=2154
     echo -en "node: ${AK_COLOR_BBlue}$(node --version)${AK_COLOR_Gray}${nvmRcInfo}${AK_COLOR_NC}"
     echo -en "   npm: ${AK_COLOR_BBlue}$(npm --version)${AK_COLOR_NC}"
@@ -105,18 +105,17 @@ function ak.nvm.version() {
     fi
     echo
   else
-    echo -e "${AK_SHELL_CURSOR_UP}${__ak_nvm_msgPrefix} ${AK_COLOR_BRed}Can not load NodeJS${AK_COLOR_NC}" >&2
+    echo -e "${AK_SHELL_CURSOR_UP}${__ak_nl_msgPrefix} ${AK_COLOR_BRed}Can not load NodeJS${AK_COLOR_NC}" >&2
   fi
 }
 
-# function nvm()  { __ak.nvm.load nvm  "$@"; }
-function node() { __ak.nvm.load node "$@"; }
-function npm()  { __ak.nvm.load npm  "$@"; }
-function npx()  { __ak.nvm.load npx  "$@"; }
-function ng()   { __ak.nvm.load ng   "$@"; }
-function nest() { __ak.nvm.load nest "$@"; }
-function yarn() { __ak.nvm.load yarn "$@"; }
-function nx()   { __ak.nvm.load nx   "$@"; }
+function node() { __ak.node-loader.load node "$@"; }
+function npm()  { __ak.node-loader.load npm  "$@"; }
+function npx()  { __ak.node-loader.load npx  "$@"; }
+function ng()   { __ak.node-loader.load ng   "$@"; }
+function nest() { __ak.node-loader.load nest "$@"; }
+function yarn() { __ak.node-loader.load yarn "$@"; }
+function nx()   { __ak.node-loader.load nx   "$@"; }
 
-__ak.nvm.autoloadNvmRc
+__ak.node-loader.autoload
 
