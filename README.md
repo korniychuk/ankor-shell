@@ -16,7 +16,7 @@ Add next lines of code to your `~/.bashrc` / `~/.zshrc` configs
 # AnKor Shell Library
 source "/code/ankor-shell/index.sh"
 source "${AK_SCRIPT_PATH}/disk-aliases.sh" "/Volumes"
-source "${AK_SCRIPT_PATH}/nvm-loader.sh"
+source "${AK_SCRIPT_PATH}/node-loader.sh"
 source "${AK_SCRIPT_PATH}/cals.sh"
 ```
 
