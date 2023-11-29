@@ -5,8 +5,8 @@
 # Works faster then via brew
 # http://broken-by.me/lazy-load-nvm/
 # https://www.reddit.com/r/node/comments/4tg5jg/lazy_load_nvm_for_faster_shell_start/d5ib9fs/
-# [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-# [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+# [ -s _PREFIX/nvm.sh" ] && \. _PREFIX/nvm.sh"  # This loads nvm
+# [ -s _PREFIX/bash_completion" ] && \. _PREFIX/bash_completion"  # This loads nvm bash_completion
 ##
 
 export __ak_nvm_isLoaded=0
@@ -18,62 +18,27 @@ function __ak.nvm.load() {
 
   # 1. parse first arg
   local command="$1"; shift
-  unset -f nvm node npm npx ng nest yarn nx # DELETE temporary loader function
+  unset -f node npm npx ng nest yarn nx # DELETE temporary loader function
 
   if [[ "${command}" == "automatically" ]]; then
-    echo "${__ak_nvm_msgPrefix} .nvmrc found --> Loading NVM ..."
+    echo "${__ak_nvm_msgPrefix} local env found --> Loading NVM ..."
   else
-    echo "${__ak_nvm_msgPrefix} Loading ..."
+    echo "${__ak_nvm_msgPrefix} Loading latest (offline) ..."
   fi
 
   # 2. This dir will contains node.js installations
-  if [[ -z "${NVM_DIR+x}" ]]; then
-    export NVM_DIR="$HOME/.nvm"
+  if [[ -z "${N_PREFIX+x}" ]]; then
+    export N_PREFIX="$HOME/n"
   fi
-  if [[ ! -d "${NVM_DIR}" ]]; then
-    mkdir "$NVM_DIR"
+  if [[ ! -d "${N_PREFIX}" ]]; then
+    mkdir "$N_PREFIX"
   fi
 
-  # 3. The NVM Loading
-  local nvmShDir="$(realpath "$(brew --prefix nvm)")"
-  local nvmShLoader="${nvmShDir}/nvm.sh"
-  local nvmShCompletion="${nvmShDir}/etc/bash_completion.d/nvm"
-  [[ -s "$nvmShLoader" ]]     && source "$nvmShLoader"
-  [[ -s "$nvmShCompletion" ]] && source "$nvmShCompletion"
-
-  # 3. load .nvmrc from the current working directory in case it exists
-  if [[ -f "$PWD/.nvmrc" ]]; then
-    local tmpfile=$(mktemp)
-    nvm use &>"$tmpfile"; local -i __ret=$?
-    local __out=$(<"$tmpfile")
-    rm "$tmpfile"
-
-    if ((__ret == 0)); then
-      ak.nvm.version 1
-    elif ((__ret == 3)); then # 3 - Requested NodeJS version isn't installed
-      local __msg=$(echo -n "$__out" | grep -F 'Found ');
-      local __err=$(echo -n "$__out" | grep -F 'N/A');
-      [[ -n "$__msg" ]] && echo "$__msg"
-      # shellcheck disable=2154
-      [[ -n "$__err" ]] && echo -e "${AK_COLOR_BRed}${__err}${AK_COLOR_NC}" >&2
-      echo
-
-      if [[ "$command" == 'automatically' ]]; then
-        ak.sh.warn "Install it manually using command 'nvm install $(cat "$PWD/.nvmrc")'"
-        return 2
-      else
-      # shellcheck disable=2154
-        echo -e "${AK_COLOR_Yellow}Installing ...${AK_COLOR_NC}"
-        nvm install
-      fi
-
-      ak.nvm.version 1
-    else # Unsupported error
-      ak.sh.err "$__out"
-      return 3
-    fi
-
+  if [[ "${command}" == "automatically" ]]; then
+    n auto > /dev/null 2>&1
+    ak.nvm.version 1
   else
+    n latest --offline > /dev/null 2>&1
     ak.nvm.version 0
   fi
 
@@ -93,11 +58,26 @@ function __ak.nvm.load() {
   fi
 }
 
-# automatically loading nvm on SHELL open in case .nvmrc found
+##
+ # Look for the next file exists in the current directory or any parent directory:
+ # .n-node-version
+ # .node-version
+ # .nvmrc
+ # package.json (with '"engines":' code fragment)
+##
 function __ak.nvm.autoloadNvmRc() {
-  if [[ -f "$PWD/.nvmrc" ]]; then
-    __ak.nvm.load 'automatically'
-  fi
+  local current_dir="$PWD"
+  while [[ "$current_dir" != "/" ]]; do
+    if [[ -f "$current_dir/.n-node-version" ]] || \
+       [[ -f "$current_dir/.node-version" ]] || \
+       [[ -f "$current_dir/.nvmrc" ]] || \
+       ( [[ -f "$current_dir/package.json" ]] && grep -q '"engines":' "$current_dir/package.json" ); then
+      __ak.nvm.load 'automatically'
+      return 0
+    fi
+
+    current_dir=$(dirname "$current_dir") # Move up to the parent directory
+  done
 }
 
 function ak.nvm.version() {
@@ -105,9 +85,9 @@ function ak.nvm.version() {
 
   local nvmRcInfo=''
   if [[ "${isNvmRcUsed}" == "1" ]]; then
-    nvmRcInfo=' (From .nvmrc)'
+    nvmRcInfo=' (from local)'
   elif [[ "${isNvmRcUsed}" == "0" ]]; then
-    nvmRcInfo=' (Default)'
+    nvmRcInfo=' (default)'
   fi
 
   if ak.sh.commandExists node; then
@@ -116,10 +96,11 @@ function ak.nvm.version() {
     # shellcheck disable=2154
     echo -en "node: ${AK_COLOR_BBlue}$(node --version)${AK_COLOR_Gray}${nvmRcInfo}${AK_COLOR_NC}"
     echo -en "   npm: ${AK_COLOR_BBlue}$(npm --version)${AK_COLOR_NC}"
-    echo -en "   nvm: ${AK_COLOR_BBlue}$(nvm --version)${AK_COLOR_NC}"
+    echo -en "   n: ${AK_COLOR_BBlue}$(n --version)${AK_COLOR_NC}"
     if ak.sh.commandExists yarn; then
       echo -en "   yarn: ${AK_COLOR_BBlue}$(yarn --version)${AK_COLOR_NC}"
     else
+    # shellcheck disable=2154
       echo -en "   yarn: ${AK_COLOR_BRed}NO${AK_COLOR_NC}"
     fi
     echo
@@ -128,7 +109,7 @@ function ak.nvm.version() {
   fi
 }
 
-function nvm()  { __ak.nvm.load nvm  "$@"; }
+# function nvm()  { __ak.nvm.load nvm  "$@"; }
 function node() { __ak.nvm.load node "$@"; }
 function npm()  { __ak.nvm.load npm  "$@"; }
 function npx()  { __ak.nvm.load npx  "$@"; }
