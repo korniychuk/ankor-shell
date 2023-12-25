@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
 
 # TODO: rename to AK_CLR_*
-export -r AK_COLOR_Green=$'\e[0;32m'
-export -r AK_COLOR_BGreen=$'\e[1;32m'
-export -r AK_COLOR_Red=$'\e[0;31m'
-export -r AK_COLOR_BRed=$'\e[1;31m'
-export -r AK_COLOR_Yellow=$'\e[0;33m'
-export -r AK_COLOR_BYellow=$'\e[1;33m'
+declare -r AK_COLOR_Green=$'\e[0;32m'
+declare -r AK_COLOR_BGreen=$'\e[1;32m'
+declare -r AK_COLOR_Red=$'\e[0;31m'
+declare -r AK_COLOR_BRed=$'\e[1;31m'
+declare -r AK_COLOR_Yellow=$'\e[0;33m'
+declare -r AK_COLOR_BYellow=$'\e[1;33m'
 
-export -r AK_COLOR_Blue=$'\e[0;34m'
-export -r AK_COLOR_BBlue=$'\e[1;34m'
-export -r AK_COLOR_Magenta=$'\e[0;35m'
-export -r AK_COLOR_BMagenta=$'\e[1;35m'
-export -r AK_COLOR_Cyan=$'\e[0;36m'
-export -r AK_COLOR_BCyan=$'\e[1;36m'
-export -r AK_COLOR_White=$'\e[0;37m'
-export -r AK_COLOR_BWhite=$'\e[1;37m'
-export -r AK_COLOR_Gray=$'\e[0;90m'
-export -r AK_COLOR_BGray=$'\e[1;90m'
+declare -r AK_COLOR_Blue=$'\e[0;34m'
+declare -r AK_COLOR_BBlue=$'\e[1;34m'
+declare -r AK_COLOR_Magenta=$'\e[0;35m'
+declare -r AK_COLOR_BMagenta=$'\e[1;35m'
+declare -r AK_COLOR_Cyan=$'\e[0;36m'
+declare -r AK_COLOR_BCyan=$'\e[1;36m'
+declare -r AK_COLOR_White=$'\e[0;37m'
+declare -r AK_COLOR_BWhite=$'\e[1;37m'
+declare -r AK_COLOR_Gray=$'\e[0;90m'
+declare -r AK_COLOR_BGray=$'\e[1;90m'
 
-export -r AK_COLOR_NC=$'\e[0m' # No Color
-export -r AK_SHELL_CURSOR_UP=$'\e[1A' # Move cursor to the previous line
+declare -r AK_COLOR_NC=$'\e[0m' # No Color
+declare -r AK_SHELL_CURSOR_UP=$'\e[1A' # Move cursor to the previous line
 
 #
 # TODO: Implement normalize boolean function '', 0, false, null
