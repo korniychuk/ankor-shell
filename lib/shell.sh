@@ -247,6 +247,35 @@ function ak.sh.die() {
   exit $errorCode
 }
 
+declare __AK_SHELL_PARAM_REQUIRED_DEFAULT_MSG="shouldn't be empty!"
+
+##
+# Check if an arg of a param isn't empty value.
+# If emptay: print a red error with error code and exit script with the same error code
+#
+# @param {string|number} value Variable value
+# @param {string} name         Variable name
+# @param {string} [errorText]
+# @param {int} [errorCode=1]
+#
+# @example
+#
+#   ak.sh.param.required "$var" 'var'
+#
+##
+function ak.sh.param.required() {
+  local -r value=${1}
+  [[ -n "$value" ]] && return 0
+
+  local -r name=${2}
+
+  local -r errorText="${3:-$__AK_SHELL_PARAM_REQUIRED_DEFAULT_MSG}"
+  local -r -i errorCode="${4:-1}"
+
+  echo -e "${AK_COLOR_BRed}Param Error ($errorCode): ${AK_COLOR_Red}'$name' ${errorText}${AK_COLOR_NC}" >&2
+  exit $errorCode
+}
+
 ##
 # Checks if the current shell is interactive.
 # Returns true when shell options include 'i' and $PS1 is not empty.
