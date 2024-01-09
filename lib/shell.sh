@@ -213,7 +213,8 @@ function ak.sh.isRoot() {
 
 function ak.sh.ok() {
   local -r msg="$1"
-  echo -e "${AK_COLOR_BGreen}[OK] ${AK_COLOR_Green}${msg}${AK_COLOR_NC}" >&2
+  local -r status="${2:-OK}"
+  echo -e "${AK_COLOR_BGreen}[$status] ${AK_COLOR_Green}${msg}${AK_COLOR_NC}" >&2
 }
 
 function ak.sh.warn() {
