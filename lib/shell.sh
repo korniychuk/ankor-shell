@@ -300,6 +300,21 @@ function ak.sh.clear-line() {
     tput el # clear the line
   done
 }
+
+##
+# Re-Echo last line.
+# 'echo' that clears previous line befor printing. All native 'echo' arguments and options are supported.
+#
+# @example
+#
+#   ak.sh.recho 'Hello'
+#
+##
+function ak.sh.recho() {
+  ak.sh.clear-line 1
+  echo "$@"
+}
+
 ##
 # Checks if the current shell is interactive.
 # Returns true when shell options include 'i' and $PS1 is not empty.
