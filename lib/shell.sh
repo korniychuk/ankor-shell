@@ -277,6 +277,30 @@ function ak.sh.param.required() {
 }
 
 ##
+# Clear 1 or multiple lines
+#
+# @example
+#
+#   ak.sh.clear-line     # clears last line
+#   ak.sh.clear-line 5   # clears last 5 lines
+#
+# @example
+#
+#   echo 'Extracting ...'
+#   unzip -q ...
+#   ak.sh.clear-line
+#   echo 'Done!'
+#
+##
+function ak.sh.clear-line() {
+  local -i n=${1:-1}
+
+  for _i in $(seq 1 $n); do
+    tput cuu1 # move cursor up by one line
+    tput el # clear the line
+  done
+}
+##
 # Checks if the current shell is interactive.
 # Returns true when shell options include 'i' and $PS1 is not empty.
 #
