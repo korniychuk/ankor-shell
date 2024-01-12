@@ -254,26 +254,25 @@ declare __AK_SHELL_PARAM_REQUIRED_DEFAULT_MSG="shouldn't be empty!"
 # Check if an arg of a param isn't empty value.
 # If emptay: print a red error with error code and exit script with the same error code
 #
-# @param {string|number} value Variable value
 # @param {string} name         Variable name
 # @param {string} [errorText]
 # @param {int} [errorCode=1]
 #
 # @example
 #
-#   ak.sh.param.required "$var" 'var'
+#   local myVar=$1
+#   ak.sh.param.required 'myVar'
 #
 ##
 function ak.sh.param.required() {
-  local -r value=${1}
+  local -r paramName=$1
+  local -r value=${!paramName}
   [[ -n "$value" ]] && return 0
-
-  local -r name=${2}
 
   local -r errorText="${3:-$__AK_SHELL_PARAM_REQUIRED_DEFAULT_MSG}"
   local -r -i errorCode="${4:-1}"
 
-  echo -e "${AK_COLOR_BRed}Param Error ($errorCode): ${AK_COLOR_Red}'$name' ${errorText}${AK_COLOR_NC}" >&2
+  echo -e "${AK_COLOR_BRed}Param Error ($errorCode): ${AK_COLOR_Red}'$paramName' ${errorText}${AK_COLOR_NC}" >&2
   exit $errorCode
 }
 
