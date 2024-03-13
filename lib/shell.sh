@@ -269,8 +269,8 @@ function ak.sh.param.required() {
   local -r value=${!paramName}
   [[ -n "$value" ]] && return 0
 
-  local -r errorText="${3:-$__AK_SHELL_PARAM_REQUIRED_DEFAULT_MSG}"
-  local -r -i errorCode="${4:-1}"
+  local -r errorText="${2:-$__AK_SHELL_PARAM_REQUIRED_DEFAULT_MSG}"
+  local -r -i errorCode="${3:-1}"
 
   echo -e "${AK_COLOR_BRed}Param Error ($errorCode): ${AK_COLOR_Red}'$paramName' ${errorText}${AK_COLOR_NC}" >&2
   exit $errorCode
