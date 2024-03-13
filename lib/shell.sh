@@ -252,7 +252,7 @@ declare __AK_SHELL_PARAM_REQUIRED_DEFAULT_MSG="shouldn't be empty!"
 
 ##
 # Check if an arg of a param isn't empty value.
-# If emptay: print a red error with error code and exit script with the same error code
+# If empty: print a red error with error code and exit script with the same error code
 #
 # @param {string} name         Variable name
 # @param {string} [errorText]
