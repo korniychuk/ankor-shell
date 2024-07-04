@@ -1,16 +1,23 @@
 #!/usr/bin/env bash
 
+##
+# Checks is an item is in an array
+#
+# @param {string} needle
+# @param {array} haystack
+#
+##
 function ak.array.inArray() {
   local needle="${1}"; shift
-  local haystack=("${@}")
+  local -a haystack=("$@")
 
-  for haystack; do
-    if [[ "$haystack" == "$needle" ]]; then
-      return 0;
+  for item in "${haystack[@]}"; do
+    if [[ "$item" == "$needle" ]]; then
+      return 0; # found
     fi
   done
 
-  return 1;
+  return 1; # not found
 }
 
 # joinBy ,    a b c #a,b,c
