@@ -76,32 +76,52 @@ function ak.str.repeatn() {
 }
 
 ##
-# Replaces sub-string in a string using Perl RegExr replacement pattern.
+# Replace substring in text using Perl regular expression pattern
 #
-# @output {string} String with replaced sub-string
+# Usage:
+#   ak.str.replace <pattern> <text>
+#   echo <text> | ak.str.replace <pattern>
 #
-# @example
+# Parameters:
+#   pattern  : Perl regex replacement pattern (e.g., "s/foo/bar/g")
+#   text     : Input text (optional if piped)
 #
-#   ak.str.replace "Hello My World" "s/ /:/g"
-#   echo "Hello My World" | ak.str.replace "s/ /:/g"
+# Examples:
+#   ak.str.replace "s/ /:/" "Hello World"     # Output: Hello:World
+#   echo "Hello World" | ak.str.replace "s/ /:/"
+#   printf "multi\nline" | ak.str.replace "s/\n/ /"
 #
+# Notes:
+#   - Uses Perl regex syntax (PCRE)
+#   - Supports multiline input in pipe mode
+#   - Preserves trailing newlines in pipe mode
+#   - Pattern must be a valid Perl substitution (s/pattern/replacement/flags)
 ##
 function ak.str.replace() {
-  local _str
-  local _regExpReplacer
+    local -r usage="Usage: ak.str.replace <pattern> [text]"
+    local text pattern
 
-  if [[ $# -eq 2 ]]; then
-    _str="${1}"
-    _regExpReplacer="${2}"
-  elif [[ $# -eq 1 ]]; then
-    _str=$(cat)
-    _regExpReplacer="${1}"
-  else
-    echo "Invalid number of arguments. Usage: ak.str.replace [source_string] regex_pattern"
-    return 1
-  fi
+    # Validate arguments
+    if [[ $# -eq 0 || $# -gt 2 ]]; then
+        printf "Error: Invalid number of arguments\n%s\n" "${usage}" >&2
+        return 1
+    fi
 
-  echo -n "$_str" | perl -0777 -pe "${_regExpReplacer}"
+    pattern="$1"
+
+    # Check if we're in pipe mode (reading from stdin)
+    if [[ $# -eq 1 ]]; then
+        # Read entire input, preserving trailing newlines
+        text="$(cat; echo x)"
+        text="${text%x}"
+    else
+        text="$2"
+    fi
+
+    # Process the text with perl
+    # -0777  : slurp mode (read entire input as one string)
+    # -pe    : process input and print result
+    printf "%s" "${text}" | perl -0777 -pe "${pattern}"
 }
 
 ##
