@@ -164,17 +164,62 @@ function ak.git.copyCurrentShortHash() {
   ak.git.getCurrentShortHash | ak.str.trimFinalNewLine | pbcopy
 }
 
+##
+# Display formatted git log with optional count and additional git arguments
+#
+# Usage:
+#   ak.git.log [<count>] [-- <git-log-args>...]
+#
+# Parameters:
+#   count         : Number of commits to show (default: 25)
+#   git-log-args  : Additional arguments passed directly to git log
+#
+# Output format:
+#   <hash> | <date> | <author> | <subject>
+#
+# Examples:
+#   ak.git.log                     # Show last 25 commits
+#   ak.git.log 10                  # Show last 10 commits
+#   ak.git.log -- libs/features    # Show commits for specific path
+#   ak.git.log 10 -- --author="John" --since="1 week ago"
+#
+# Notes:
+#   - Output is limited to 140 characters per line
+#   - Date format: YYYY-MM-DD HH:MM:SS
+#   - Author name is padded to 20 characters
+#
+# Output example:
+#   * 21c8b15b516 | 2024-12-16 07:43:58 | Anton Kor     | Settings → Email branding: update Pendo event & link (#45074)
+#   * c015e2d33b3 | 2024-11-21 10:53:25 | Anton Kor     | Settings → Branding → Email: "Use display name" checkbox (#44234)
+#   * 5a1cbf8542e | 2024-11-20 19:53:24 | Metier        | Angular18 5 (#44204)
+#   * e7db97e9a2f | 2024-11-08 11:25:56 | John Neo      | GitPod improvements (#43806)
+#
+##
 function ak.git.log() {
-  local -r count="${1:-25}"
+    local count=25  # default count
+    local -a extra_args=()
 
-  git \
-    --no-pager \
-    log \
-      --pretty=format:"%h | %ad | %<(20)%an | %s" \
-      --graph \
-      --date=format:'%Y-%m-%d %H:%M:%S' \
-      --max-count="${count}" \
-    | cut -c 1-140
+    # If first arg isn't -- and is a number, use it as count
+    if [[ "${1:-}" != "--" && -n "${1:-}" ]]; then
+        count="$1"
+        shift
+    fi
+
+    # Collect all args after --
+    if [[ "${1:-}" == "--" ]]; then
+        shift
+        extra_args+=("$@")
+    fi
+
+    git \
+        --no-pager \
+        log \
+            --pretty=format:"%h | %ad | %<(20)%an | %s" \
+            --graph \
+            --date=format:'%Y-%m-%d %H:%M:%S' \
+            --max-count="${count}" \
+            "${extra_args[@]}" \
+        | cut -c 1-140
 }
 
 function ak.git.isClean() {
