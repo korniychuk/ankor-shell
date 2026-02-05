@@ -1,0 +1,15 @@
+# User-specific
+/workspace.xml
+/tasks.xml
+/usage.statistics.xml
+/dictionaries/
+/shelf/
+
+# High-churn
+/dynamic.xml
+
+# REST client history
+/httpRequests/
+
+# Copilot
+/copilot.data.migration.*
