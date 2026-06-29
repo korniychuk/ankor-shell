@@ -213,8 +213,9 @@ function ak.sh.isRoot() {
 
 function ak.sh.ok() {
   local -r msg="$1"
-  local -r status="${2:-OK}"
-  echo -e "${AK_COLOR_BGreen}[$status] ${AK_COLOR_Green}${msg}${AK_COLOR_NC}" >&2
+  # NB: do NOT name this 'status' — it is a read-only special var in zsh (alias of $?).
+  local -r _status="${2:-OK}"
+  echo -e "${AK_COLOR_BGreen}[$_status] ${AK_COLOR_Green}${msg}${AK_COLOR_NC}" >&2
 }
 
 function ak.sh.warn() {
