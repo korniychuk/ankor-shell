@@ -7,13 +7,13 @@
 # Purpose: let an automation/agent (or a quick maintenance window) run privileged
 # commands for a BOUNDED time WITHOUT ever sharing your password. You run
 # `ak.sudo.lend` once (typing your password a single time); a transient systemd
-# timer auto-revokes the grant after N minutes, or call `ak.sudo.return`.
+# timer auto-revokes the grant after N minutes, or call `ak.sudo.revoke`.
 #
 # @example
 #   ak.sudo.lend            # grant for 30 min (default)
 #   ak.sudo.lend 120        # grant for 2 hours
 #   ak.sudo.status          # is it active? when does it auto-revoke?
-#   ak.sudo.return          # revoke now + cancel the timer
+#   ak.sudo.revoke          # revoke now + cancel the timer
 #
 # One-shot from another machine (function lives in an interactive rc):
 #   ssh -t HOST 'bash -lic "ak.sudo.lend 60"'
@@ -71,12 +71,12 @@ function ak.sudo.lend() {
   if ak.sh.commandExists systemd-run; then
     if sudo systemd-run --quiet --unit="${AK_SUDO_UNIT}" --on-active="${mins}min" \
          /bin/rm -f "${AK_SUDO_FILE}"; then
-      ak.sh.ok "passwordless sudo lent to '${user}' for ${mins}m — auto-revokes, or run ak.sudo.return" "SUDO"
+      ak.sh.ok "passwordless sudo lent to '${user}' for ${mins}m — auto-revokes, or run ak.sudo.revoke" "SUDO"
     else
-      ak.sh.warn "grant active but auto-revoke timer failed to arm — run ak.sudo.return when done!"
+      ak.sh.warn "grant active but auto-revoke timer failed to arm — run ak.sudo.revoke when done!"
     fi
   else
-    ak.sh.warn "systemd-run unavailable: NO auto-revoke scheduled — you MUST run ak.sudo.return!"
+    ak.sh.warn "systemd-run unavailable: NO auto-revoke scheduled — you MUST run ak.sudo.revoke!"
     ak.sh.ok "passwordless sudo lent to '${user}' (manual revoke required)" "SUDO"
   fi
 }
@@ -84,7 +84,7 @@ function ak.sudo.lend() {
 ##
 # Revoke the temporary passwordless sudo immediately and cancel the auto-revoke timer.
 ##
-function ak.sudo.return() {
+function ak.sudo.revoke() {
   __ak.sudo.preflight || return 1
 
   sudo systemctl stop "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
@@ -92,7 +92,7 @@ function ak.sudo.return() {
   sudo rm -f "${AK_SUDO_FILE}"
 
   if sudo -n test -f "${AK_SUDO_FILE}" 2> /dev/null; then
-    ak.sh.err "ak.sudo.return: ${AK_SUDO_FILE} still present — remove it manually."
+    ak.sh.err "ak.sudo.revoke: ${AK_SUDO_FILE} still present — remove it manually."
     return 1
   fi
   ak.sh.ok "temporary passwordless sudo revoked" "SUDO"
