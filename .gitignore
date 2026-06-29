@@ -77,3 +77,7 @@ $RECYCLE.BIN/
 ## Updater
 /.last-update.log
 /.crontab-updater.sh
+
+
+## Node.js
+/node_modules/
