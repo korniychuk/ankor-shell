@@ -55,10 +55,14 @@ function ak.sudo.lend() {
   local -r line="${user} ALL=(ALL) NOPASSWD: ALL"
 
   # Write + validate the drop-in (revert if it would break sudo).
-  if ! printf '%s\n' "${line}" | sudo install -m 0440 -o root -g root /dev/stdin "${AK_SUDO_FILE}"; then
+  # Use `tee` then chmod/chown — `install /dev/stdin` is flaky with uutils-coreutils
+  # (Ubuntu 26.04) over a non-tty session ("install: No such file or directory").
+  if ! printf '%s\n' "${line}" | sudo tee "${AK_SUDO_FILE}" > /dev/null; then
     ak.sh.err "ak.sudo.lend: failed to write ${AK_SUDO_FILE}"
     return 1
   fi
+  sudo chown root:root "${AK_SUDO_FILE}"
+  sudo chmod 0440 "${AK_SUDO_FILE}"
   if ! sudo visudo -cf "${AK_SUDO_FILE}" > /dev/null; then
     sudo rm -f "${AK_SUDO_FILE}"
     ak.sh.err "ak.sudo.lend: sudoers validation failed — reverted, no change."
