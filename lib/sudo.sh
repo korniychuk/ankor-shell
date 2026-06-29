@@ -87,6 +87,14 @@ function ak.sudo.lend() {
 function ak.sudo.revoke() {
   __ak.sudo.preflight || return 1
 
+  # No-op notice: if passwordless sudo isn't currently available there is no active
+  # grant to revoke (already revoked, or auto-expired). Bail out BEFORE touching sudo
+  # so an idle call never prompts for a password.
+  if ! sudo -n true 2> /dev/null; then
+    echo "ak.sudo.revoke: nothing to revoke — no active grant (already revoked or auto-expired)."
+    return 0
+  fi
+
   sudo systemctl stop "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
   sudo systemctl reset-failed "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
   sudo rm -f "${AK_SUDO_FILE}"
