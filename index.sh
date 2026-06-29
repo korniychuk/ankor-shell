@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO: split /lib into /sdk & /features
+
 # TODO: checking minimum bash version
 # TODO: versions
 # TODO: bundling via Travis CI
