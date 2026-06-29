@@ -63,9 +63,11 @@ function ak.sudo.lend() {
     return 1
   fi
 
-  # (Re)arm the auto-revoke timer.
-  sudo systemctl stop "${AK_SUDO_UNIT}.timer" 2> /dev/null
-  sudo systemctl reset-failed "${AK_SUDO_UNIT}.service" 2> /dev/null
+  # (Re)arm the auto-revoke timer. Idempotent: fully clear any prior transient unit
+  # (timer + service) first, so calling ak.sudo.lend several times in a row just
+  # RESETS the window instead of failing on "Unit already exists".
+  sudo systemctl stop "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
+  sudo systemctl reset-failed "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
   if ak.sh.commandExists systemd-run; then
     if sudo systemd-run --quiet --unit="${AK_SUDO_UNIT}" --on-active="${mins}min" \
          /bin/rm -f "${AK_SUDO_FILE}"; then
@@ -85,8 +87,8 @@ function ak.sudo.lend() {
 function ak.sudo.return() {
   __ak.sudo.preflight || return 1
 
-  sudo systemctl stop "${AK_SUDO_UNIT}.timer" 2> /dev/null
-  sudo systemctl reset-failed "${AK_SUDO_UNIT}.service" 2> /dev/null
+  sudo systemctl stop "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
+  sudo systemctl reset-failed "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
   sudo rm -f "${AK_SUDO_FILE}"
 
   if sudo -n test -f "${AK_SUDO_FILE}" 2> /dev/null; then

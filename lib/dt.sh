@@ -15,9 +15,10 @@ declare -r AK_DT_FORMAT_TIME="%H:%M:%S"
 #
 # Resolved GNU `date` binary name, cached across calls:
 #   ""      - not resolved yet
-#   "date"  - GNU coreutils `date` is available UNPREFIXED (Linux, or macOS w/ GNU first in PATH)
-#   "gdate" - unprefixed `date` is not GNU, but the g-PREFIXED `gdate` is (macOS + coreutils)
-#   "-"     - no GNU date found at all
+#   "date"  - unprefixed `date` is GNU- or uutils-coreutils (Linux; uutils ships by
+#             default on Ubuntu 25.10+/26.04) — GNU-CLI-compatible for our usage
+#   "gdate" - unprefixed `date` is BSD (macOS), but the g-PREFIXED `gdate` is GNU (brew coreutils)
+#   "-"     - no GNU-compatible date found at all
 #
 __akDtGlobal_dateBin="";
 
@@ -143,9 +144,13 @@ function __ak.dt.resolveDateBin() {
     return ${?}
   fi
 
-  if date --version 2> /dev/null | grep -q GNU; then
+  # Accept GNU coreutils OR uutils-coreutils (the Rust reimpl. shipped by default on
+  # Ubuntu 25.10+/26.04) — both are GNU-CLI-compatible for our usage and both print
+  # their vendor in `--version`. BSD `date` (macOS) has no `--version`, so it is
+  # excluded here and handled via the g-prefixed `gdate` branch below.
+  if date --version 2> /dev/null | grep -qiE 'gnu|uutils'; then
     __akDtGlobal_dateBin="date"
-  elif ak.sh.commandExists gdate && gdate --version 2> /dev/null | grep -q GNU; then
+  elif ak.sh.commandExists gdate && gdate --version 2> /dev/null | grep -qiE 'gnu|uutils'; then
     __akDtGlobal_dateBin="gdate"
   else
     __akDtGlobal_dateBin="-"
@@ -165,7 +170,7 @@ function __ak.dt.resolveDateBin() {
 #
 function __ak.dt.gdate() {
   if ! __ak.dt.resolveDateBin; then
-    ak.sh.err "GNU date not found — install GNU coreutils ('date' on Linux; 'brew install coreutils' for 'gdate' on macOS)"
+    ak.sh.err "No GNU-compatible date found — need GNU/uutils 'date' (Linux) or 'gdate' (macOS: brew install coreutils)"
     return 1
   fi
 
