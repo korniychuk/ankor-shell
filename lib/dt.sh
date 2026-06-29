@@ -20,7 +20,7 @@ declare -r AK_DT_FORMAT_TIME="%H:%M:%S"
 #   "gdate" - unprefixed `date` is BSD (macOS), but the g-PREFIXED `gdate` is GNU (brew coreutils)
 #   "-"     - no GNU-compatible date found at all
 #
-__akDtGlobal_dateBin="";
+declare __akDtGlobal_dateBin="";
 
 #
 ### Functions ######################################################################################

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO: move to /features/sudo.sh
+
 ##
 # ak.sudo.* — lend the CURRENT user temporary passwordless sudo, time-boxed with
 # an automatic revoke (systemd timer) as a safety net. Linux + sudo + systemd.
