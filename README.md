@@ -37,3 +37,8 @@ git clone git@github.com:korniychuk/ankor-shell_custom-scripts.git custom-script
   - panic fn
   - strict mode
   - error handling
+
+## License
+
+Copyright 2019-2025 [Anton Korniychuk](https://github.com/korniychuk).
+Licensed under the [Apache License, Version 2.0](LICENSE).
