@@ -24,11 +24,11 @@ declare -r AK_SUDO_UNIT="ak-sudo-revoke"
 
 function __ak.sudo.preflight() {
   if ! ak.os.type.isLinux; then
-    echo "ak.sudo.* is Linux-only (needs /etc/sudoers.d + systemd)." >&2
+    ak.sh.err "ak.sudo.* is Linux-only (needs /etc/sudoers.d + systemd)."
     return 1
   fi
-  if ! command -v sudo >/dev/null 2>&1; then
-    echo "ak.sudo.*: 'sudo' not found." >&2
+  if ! ak.sh.commandExists sudo; then
+    ak.sh.err "ak.sudo.*: 'sudo' not found."
     return 1
   fi
   return 0
@@ -45,7 +45,7 @@ function ak.sudo.lend() {
 
   local -r mins="${1:-30}"
   if [[ ! "${mins}" =~ ^[0-9]+$ ]] || (( mins < 1 || mins > 1440 )); then
-    echo "Usage: ak.sudo.lend [minutes 1..1440]  (default 30)" >&2
+    ak.sh.err "Usage: ak.sudo.lend [minutes 1..1440]  (default 30)"
     return 1
   fi
 
@@ -54,28 +54,28 @@ function ak.sudo.lend() {
 
   # Write + validate the drop-in (revert if it would break sudo).
   if ! printf '%s\n' "${line}" | sudo install -m 0440 -o root -g root /dev/stdin "${AK_SUDO_FILE}"; then
-    echo "ak.sudo.lend: failed to write ${AK_SUDO_FILE}" >&2
+    ak.sh.err "ak.sudo.lend: failed to write ${AK_SUDO_FILE}"
     return 1
   fi
-  if ! sudo visudo -cf "${AK_SUDO_FILE}" >/dev/null; then
+  if ! sudo visudo -cf "${AK_SUDO_FILE}" > /dev/null; then
     sudo rm -f "${AK_SUDO_FILE}"
-    echo "ak.sudo.lend: sudoers validation failed — reverted, no change." >&2
+    ak.sh.err "ak.sudo.lend: sudoers validation failed — reverted, no change."
     return 1
   fi
 
   # (Re)arm the auto-revoke timer.
-  sudo systemctl stop "${AK_SUDO_UNIT}.timer" 2>/dev/null
-  sudo systemctl reset-failed "${AK_SUDO_UNIT}.service" 2>/dev/null
-  if command -v systemd-run >/dev/null 2>&1; then
+  sudo systemctl stop "${AK_SUDO_UNIT}.timer" 2> /dev/null
+  sudo systemctl reset-failed "${AK_SUDO_UNIT}.service" 2> /dev/null
+  if ak.sh.commandExists systemd-run; then
     if sudo systemd-run --quiet --unit="${AK_SUDO_UNIT}" --on-active="${mins}min" \
          /bin/rm -f "${AK_SUDO_FILE}"; then
-      echo "✅ passwordless sudo lent to '${user}' for ${mins}m — auto-revokes, or run ak.sudo.return"
+      ak.sh.ok "passwordless sudo lent to '${user}' for ${mins}m — auto-revokes, or run ak.sudo.return" "SUDO"
     else
-      echo "⚠️  grant active but auto-revoke timer failed to arm — run ak.sudo.return when done!" >&2
+      ak.sh.warn "grant active but auto-revoke timer failed to arm — run ak.sudo.return when done!"
     fi
   else
-    echo "⚠️  systemd-run unavailable: NO auto-revoke scheduled — you MUST run ak.sudo.return!" >&2
-    echo "✅ passwordless sudo lent to '${user}' (manual revoke required)"
+    ak.sh.warn "systemd-run unavailable: NO auto-revoke scheduled — you MUST run ak.sudo.return!"
+    ak.sh.ok "passwordless sudo lent to '${user}' (manual revoke required)" "SUDO"
   fi
 }
 
@@ -85,15 +85,15 @@ function ak.sudo.lend() {
 function ak.sudo.return() {
   __ak.sudo.preflight || return 1
 
-  sudo systemctl stop "${AK_SUDO_UNIT}.timer" 2>/dev/null
-  sudo systemctl reset-failed "${AK_SUDO_UNIT}.service" 2>/dev/null
+  sudo systemctl stop "${AK_SUDO_UNIT}.timer" 2> /dev/null
+  sudo systemctl reset-failed "${AK_SUDO_UNIT}.service" 2> /dev/null
   sudo rm -f "${AK_SUDO_FILE}"
 
-  if sudo -n test -f "${AK_SUDO_FILE}" 2>/dev/null; then
-    echo "ak.sudo.return: ${AK_SUDO_FILE} still present — remove it manually." >&2
+  if sudo -n test -f "${AK_SUDO_FILE}" 2> /dev/null; then
+    ak.sh.err "ak.sudo.return: ${AK_SUDO_FILE} still present — remove it manually."
     return 1
   fi
-  echo "✅ temporary passwordless sudo revoked"
+  ak.sh.ok "temporary passwordless sudo revoked" "SUDO"
 }
 
 ##
@@ -102,9 +102,9 @@ function ak.sudo.return() {
 function ak.sudo.status() {
   __ak.sudo.preflight || return 1
 
-  if sudo -n true 2>/dev/null; then
-    echo "ACTIVE — passwordless sudo currently available for '$(id -un)'"
-    systemctl list-timers "${AK_SUDO_UNIT}.timer" --all --no-pager 2>/dev/null | sed -n '1,2p'
+  if sudo -n true 2> /dev/null; then
+    ak.sh.ok "passwordless sudo currently available for '$(id -un)'" "ACTIVE"
+    systemctl list-timers "${AK_SUDO_UNIT}.timer" --all --no-pager 2> /dev/null | sed -n '1,2p'
   else
     echo "inactive — sudo requires a password (no active grant)"
   fi

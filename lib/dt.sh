@@ -13,12 +13,13 @@ declare -r AK_DT_FORMAT_DATE="%Y-%m-%d"
 declare -r AK_DT_FORMAT_TIME="%H:%M:%S"
 
 #
-# -1 - not checked
-#  0 - not GNU Date. May be BSD version from the Mac OS X
-#  1 - default `date` is GNU Date
-#  2 - default `date` it not GNU, however GNU version is available under `gdate` alias
+# Resolved GNU `date` binary name, cached across calls:
+#   ""      - not resolved yet
+#   "date"  - GNU coreutils `date` is available UNPREFIXED (Linux, or macOS w/ GNU first in PATH)
+#   "gdate" - unprefixed `date` is not GNU, but the g-PREFIXED `gdate` is (macOS + coreutils)
+#   "-"     - no GNU date found at all
 #
-declare -i __akDtGlobal_dateVendor=-1;
+__akDtGlobal_dateBin="";
 
 #
 ### Functions ######################################################################################
@@ -48,11 +49,7 @@ declare -i __akDtGlobal_dateVendor=-1;
 #
 #
 function ak.dt.hasGNUDate() {
-  __ak.dt.checkDateVendor
-  if [[ ${?} -eq 1 ]] || [[ ${?} -eq 2 ]]; then
-      return 0
-  fi
-  return 1
+  __ak.dt.resolveDateBin
 }
 
 #
@@ -136,40 +133,41 @@ function ak.dt.now.iso() {
 }
 
 #
-# Check is GNU or Other(BSD for example) `date` util installed
+# Resolve (once, cached) which GNU `date` binary to use, following the rule:
+#   prefer the UNPREFIXED GNU util -> else the g-PREFIXED variant -> else fail.
+# Sets __akDtGlobal_dateBin; returns 0 if GNU date is available, 1 otherwise.
 #
-function __ak.dt.checkDateVendor() {
-  if [[ ${__akDtGlobal_dateVendor} -eq -1 ]]; then
-
-    if date --version 2> /dev/null | grep GNU &> /dev/null; then
-      __akDtGlobal_dateVendor=1
-    elif gdate --version 2> /dev/null | grep GNU &> /dev/null; then
-      __akDtGlobal_dateVendor=2
-    else
-      __akDtGlobal_dateVendor=0
-    fi
+function __ak.dt.resolveDateBin() {
+  if [[ -n "${__akDtGlobal_dateBin}" ]]; then
+    [[ "${__akDtGlobal_dateBin}" != "-" ]]
+    return ${?}
   fi
 
-  return ${__akDtGlobal_dateVendor}
+  if date --version 2> /dev/null | grep -q GNU; then
+    __akDtGlobal_dateBin="date"
+  elif ak.sh.commandExists gdate && gdate --version 2> /dev/null | grep -q GNU; then
+    __akDtGlobal_dateBin="gdate"
+  else
+    __akDtGlobal_dateBin="-"
+    return 1
+  fi
+
+  return 0
 }
 
 #
-# Universal wrapper to use `date` or `gdate` if the first one is not available.
+# Universal wrapper that runs the resolved GNU `date` (unprefixed `date` on Linux,
+# `gdate` on macOS + coreutils). Errors if no GNU date is available.
 #
 # Example:
 #
 #     __ak.dt.gdate --utc "%H:%M"
 #
 function __ak.dt.gdate() {
-  __ak.dt.checkDateVendor
-  local -r -i res=${?}
-  if [[ ${res} -eq 1 ]]; then
-      date "${@}"
-  elif [[ ${res} -eq 2 ]]; then
-      gdate "${@}"
-  else
-      echo "ERROR! Can't find GNU Date utility" >&2
+  if ! __ak.dt.resolveDateBin; then
+    ak.sh.err "GNU date not found — install GNU coreutils ('date' on Linux; 'brew install coreutils' for 'gdate' on macOS)"
+    return 1
   fi
 
-  return ${res}
+  "${__akDtGlobal_dateBin}" "${@}"
 }
