@@ -17,7 +17,7 @@ The library is structured with a central `index.sh` file that sources various mo
 
 *   `index.sh`: The primary entry point, responsible for loading all necessary components.
 *   `config.sh`: Manages aliases, environment variables, and conditional loading of tools like `gdu` and `nvim`. It also provides a mechanism for project-specific initialization via `.ak-init.sh`.
-*   `lib/`: Contains modular shell scripts categorized by functionality (e.g., `git.sh`, `os.sh`, `str.sh`, `shell.sh`).
+*   `sdk/`: Contains modular shell scripts categorized by functionality (e.g., `git.sh`, `os.sh`, `str.sh`, `shell.sh`).
 *   `custom-scripts/` and `local-scripts/`: Directories for user-defined scripts, dynamically loaded by `cals.sh` with `aks.` and `akl.` prefixes, respectively.
 *   `.bin/`: A directory where symbolic links to custom/local scripts are created, making them executable as commands.
 *   `node-loader.sh`: Implements lazy-loading for Node.js using the `n` version manager, automatically detecting project-specific Node.js versions.

@@ -345,7 +345,7 @@ function ak.sh.isInteractive() {
 # Example: command | ak.sh.debounce -t 2 -c 'sort -u -r -'
 ##
 function ak.sh.debounce() {
-  "$AK_SCRIPT_PATH/lib/shell.debounce.sh" "$@" <&0
+  "$AK_SCRIPT_PATH/sdk/shell.debounce.sh" "$@" <&0
 }
 
 ##

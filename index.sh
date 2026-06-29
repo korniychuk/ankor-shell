@@ -51,24 +51,24 @@ declare -r AK_SCRIPT_PATH=$( cd $(
 ) ; pwd -P )
 
 source "${AK_SCRIPT_PATH}/config.sh"
-source "${AK_SCRIPT_PATH}/lib/str.sh"
-source "${AK_SCRIPT_PATH}/lib/array.sh"
+source "${AK_SCRIPT_PATH}/sdk/str.sh"
+source "${AK_SCRIPT_PATH}/sdk/array.sh"
 
-source "${AK_SCRIPT_PATH}/lib/bash.sh"
-source "${AK_SCRIPT_PATH}/lib/shell.sh"
-source "${AK_SCRIPT_PATH}/lib/rnd.sh"
-source "${AK_SCRIPT_PATH}/lib/doc.sh"
-source "${AK_SCRIPT_PATH}/lib/os.sh"
+source "${AK_SCRIPT_PATH}/sdk/bash.sh"
+source "${AK_SCRIPT_PATH}/sdk/shell.sh"
+source "${AK_SCRIPT_PATH}/sdk/rnd.sh"
+source "${AK_SCRIPT_PATH}/sdk/doc.sh"
+source "${AK_SCRIPT_PATH}/sdk/os.sh"
 
-source "${AK_SCRIPT_PATH}/lib/dt.sh"
-source "${AK_SCRIPT_PATH}/lib/git.sh"
-source "${AK_SCRIPT_PATH}/lib/inet.sh"
-source "${AK_SCRIPT_PATH}/lib/updater.sh"
-source "${AK_SCRIPT_PATH}/lib/docker.sh"
-source "${AK_SCRIPT_PATH}/lib/downloader.sh"
+source "${AK_SCRIPT_PATH}/sdk/dt.sh"
+source "${AK_SCRIPT_PATH}/sdk/git.sh"
+source "${AK_SCRIPT_PATH}/sdk/inet.sh"
+source "${AK_SCRIPT_PATH}/sdk/updater.sh"
+source "${AK_SCRIPT_PATH}/sdk/docker.sh"
+source "${AK_SCRIPT_PATH}/sdk/downloader.sh"
 
 if ak.os.type.isMacOS; then
-  source "${AK_SCRIPT_PATH}/lib/macos.sh"
+  source "${AK_SCRIPT_PATH}/sdk/macos.sh"
 fi
 
 # Features (loaded after SDK)

@@ -8,7 +8,7 @@ AnKor Shell is a modular Bash/Zsh utility library providing helper functions for
 
 ## Loading & Usage
 
-The library is loaded by sourcing `index.sh` from `~/.bashrc` or `~/.zshrc`. It sequentially sources all modules from `lib/`, then conditionally loads `lib/macos.sh` on macOS. Additional entry points (`cals.sh`, `disk-aliases.sh`, `node-loader.sh`) are sourced separately by the user.
+The library is loaded by sourcing `index.sh` from `~/.bashrc` or `~/.zshrc`. It sequentially sources all modules from `sdk/`, then conditionally loads `sdk/macos.sh` on macOS. Additional entry points (`cals.sh`, `disk-aliases.sh`, `node-loader.sh`) are sourced separately by the user.
 
 There is no build step, no package manager, no test framework, and no linter configured.
 
@@ -16,24 +16,24 @@ There is no build step, no package manager, no test framework, and no linter con
 
 ### Module Structure
 
-`index.sh` → sources `config.sh` + all `lib/*.sh` modules in order:
+`index.sh` → sources `config.sh` + all `sdk/*.sh` modules in order:
 
 | Module | Domain prefix | Purpose |
 |--------|--------------|---------|
-| `lib/str.sh` | `ak.str.*` | String manipulation (uses Perl for regex) |
-| `lib/array.sh` | `ak.array.*` | Array utilities (`inArray`, `joinBy`) |
-| `lib/bash.sh` | `ak.bash.*` | Bash version checking |
-| `lib/shell.sh` | `ak.sh.*` | Core shell utilities, colors, user interaction, parameter validation |
-| `lib/rnd.sh` | `ak.rnd.*` | Random generation (ObjectID, integers, time) |
-| `lib/doc.sh` | — | Documentation utilities |
-| `lib/os.sh` | `ak.os.type.*` | OS detection (macOS, Linux, BSD, Windows, Solaris) |
-| `lib/dt.sh` | `ak.dt.*` | Date/time (wraps GNU/BSD `date`) |
-| `lib/git.sh` | `ak.git.*` | Git operations (largest module, 400+ lines) |
-| `lib/inet.sh` | `ak.inet.*` | Network utilities, IP detection, URI encoding |
-| `lib/updater.sh` | `ak.updater.*` | Self-update via git pull + cron |
-| `lib/docker.sh` | `ak.docker.*` | Docker registry tags, network ops |
-| `lib/downloader.sh` | `ak.downloader.*` | M3U8/HLS stream downloader (ffmpeg) |
-| `lib/macos.sh` | (conditional) | macOS-specific functions, loaded only on macOS |
+| `sdk/str.sh` | `ak.str.*` | String manipulation (uses Perl for regex) |
+| `sdk/array.sh` | `ak.array.*` | Array utilities (`inArray`, `joinBy`) |
+| `sdk/bash.sh` | `ak.bash.*` | Bash version checking |
+| `sdk/shell.sh` | `ak.sh.*` | Core shell utilities, colors, user interaction, parameter validation |
+| `sdk/rnd.sh` | `ak.rnd.*` | Random generation (ObjectID, integers, time) |
+| `sdk/doc.sh` | — | Documentation utilities |
+| `sdk/os.sh` | `ak.os.type.*` | OS detection (macOS, Linux, BSD, Windows, Solaris) |
+| `sdk/dt.sh` | `ak.dt.*` | Date/time (wraps GNU/BSD `date`) |
+| `sdk/git.sh` | `ak.git.*` | Git operations (largest module, 400+ lines) |
+| `sdk/inet.sh` | `ak.inet.*` | Network utilities, IP detection, URI encoding |
+| `sdk/updater.sh` | `ak.updater.*` | Self-update via git pull + cron |
+| `sdk/docker.sh` | `ak.docker.*` | Docker registry tags, network ops |
+| `sdk/downloader.sh` | `ak.downloader.*` | M3U8/HLS stream downloader (ffmpeg) |
+| `sdk/macos.sh` | (conditional) | macOS-specific functions, loaded only on macOS |
 
 ### CaLS (Custom and Local Scripts)
 
@@ -45,7 +45,7 @@ There is no build step, no package manager, no test framework, and no linter con
 
 - `AK_SCRIPT_PATH` — root directory of the library (set in `index.sh`)
 - `AK_CALS_CUSTOM_SCRIPTS_PATH`, `AK_CALS_LOCAL_SCRIPTS_PATH` — script directories
-- Color constants in `lib/shell.sh`: `Red`, `Green`, `Yellow`, `Blue`, `Magenta`, `Cyan`, `Gray`, `NC` (No Color)
+- Color constants in `sdk/shell.sh`: `Red`, `Green`, `Yellow`, `Blue`, `Magenta`, `Cyan`, `Gray`, `NC` (No Color)
 
 ## Coding Conventions
 

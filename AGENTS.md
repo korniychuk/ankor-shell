@@ -1,8 +1,8 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `index.sh` is the main entry point and sources `config.sh` plus modules in `lib/`.
-- `lib/` contains reusable Bash/Zsh modules (e.g., `git.sh`, `os.sh`, `str.sh`, `shell.sh`).
+- `index.sh` is the main entry point and sources `config.sh` plus modules in `sdk/`.
+- `sdk/` contains reusable Bash/Zsh modules (e.g., `git.sh`, `os.sh`, `str.sh`, `shell.sh`).
 - `cals.sh` manages custom commands from `custom-scripts/` and `local-scripts/`, creating wrappers in `.bin/` with `aks.` and `akl.` prefixes.
 - `examples/` holds sample scripts and tech-talk demos for usage patterns.
 - Optional entry scripts: `disk-aliases.sh`, `node-loader.sh`, `cals.sh`.
@@ -20,7 +20,7 @@ source "${AK_SCRIPT_PATH}/cals.sh"
 
 Example manual checks:
 - Run examples: `bash examples/array.examples.sh`
-- Syntax check: `bash -n lib/*.sh`
+- Syntax check: `bash -n sdk/*.sh`
 
 ## Coding Style & Naming Conventions
 - Shell scripts target Bash with Zsh compatibility where possible.
