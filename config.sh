@@ -57,6 +57,13 @@ alias gcb='echo "Git Branch: $(ak.git.getCurrentBranch) (copied)" && ak.git.copy
 alias lg="lazygit"
 alias akhelp="ak.sh.showConfig"
 
+# Kubernetes
+if [[ -x "$(command -v 'kubectl')" ]]; then
+  alias k='kubectl'
+elif [[ -x "$(command -v 'k3s')" ]]; then
+  alias k='k3s kubectl'
+fi
+
 alias h1='head -n 10'
 alias h='head -n 25'
 alias h5='head -n 50'
