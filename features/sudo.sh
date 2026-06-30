@@ -34,6 +34,21 @@ function __ak.sudo.preflight() {
   return 0
 }
 
+# True if sudo currently runs WITHOUT a password — for ANY reason: an ak grant,
+# a cached credential timestamp, OR a standing NOPASSWD rule we don't manage.
+# Never prompts (`-n`).
+function __ak.sudo.passwordless() {
+  sudo -n true 2> /dev/null
+}
+
+# True if OUR temp drop-in is present — the single source of truth for an ak
+# grant. Statting it needs passwordless sudo (the dir is root:root 0750); if sudo
+# would prompt, there cannot be an active passwordless ak grant anyway, so a
+# silent failure correctly reads as "absent".
+function __ak.sudo.granted() {
+  sudo -n test -f "${AK_SUDO_FILE}" 2> /dev/null
+}
+
 ##
 # Grant passwordless sudo to the current user for N minutes (default 30, range 1..1440).
 # Prompts for your password ONCE (the first sudo). Auto-revokes via a transient
@@ -51,6 +66,13 @@ function ak.sudo.lend() {
 
   local -r user="$(id -un)"
   local -r line="${user} ALL=(ALL) NOPASSWD: ALL"
+
+  # Heads-up: if sudo is ALREADY passwordless before we lend (and it isn't our own
+  # prior grant), a STANDING rule grants it permanently. Lending is then cosmetic —
+  # ak.sudo.revoke / the auto-revoke timer only remove ak's file, never that rule.
+  if ! __ak.sudo.granted && __ak.sudo.passwordless; then
+    ak.sh.warn "passwordless sudo is ALREADY available via a standing sudoers rule (not ak) — ak.sudo.revoke / auto-revoke will NOT remove it."
+  fi
 
   # Write + validate the drop-in (revert if it would break sudo).
   # Use `tee` then chmod/chown — `install /dev/stdin` is flaky with uutils-coreutils
@@ -91,11 +113,16 @@ function ak.sudo.lend() {
 function ak.sudo.revoke() {
   __ak.sudo.preflight || return 1
 
-  # No-op notice: if passwordless sudo isn't currently available there is no active
-  # grant to revoke (already revoked, or auto-expired). Bail out BEFORE touching sudo
-  # so an idle call never prompts for a password.
-  if ! sudo -n true 2> /dev/null; then
-    echo "ak.sudo.revoke: nothing to revoke — no active grant (already revoked or auto-expired)."
+  # The grant IS our sudoers drop-in. Gate on the FILE, not on `sudo -n true`:
+  # a standing NOPASSWD rule (or a cached timestamp) makes `sudo -n true` succeed
+  # even when ak never lent anything, which made revoke falsely report success.
+  # If we can't stat the file passwordlessly, there is no active ak grant to
+  # revoke — bail BEFORE touching sudo so an idle call never prompts.
+  if ! __ak.sudo.granted; then
+    echo "ak.sudo.revoke: nothing to revoke — no ak grant (${AK_SUDO_FILE} absent)."
+    if __ak.sudo.passwordless; then
+      ak.sh.warn "but passwordless sudo IS still available via a rule NOT managed by ak.sudo (e.g. another /etc/sudoers.d/* file) — revoke cannot remove that."
+    fi
     return 0
   fi
 
@@ -103,7 +130,7 @@ function ak.sudo.revoke() {
   sudo systemctl reset-failed "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
   sudo rm -f "${AK_SUDO_FILE}"
 
-  if sudo -n test -f "${AK_SUDO_FILE}" 2> /dev/null; then
+  if __ak.sudo.granted; then
     ak.sh.err "ak.sudo.revoke: ${AK_SUDO_FILE} still present — remove it manually."
     return 1
   fi
@@ -112,7 +139,15 @@ function ak.sudo.revoke() {
   # sudoers drop-in is NOT enough: sudo keeps honoring the cached timestamp
   # (timestamp_timeout, default 15m) so passwordless sudo stays live AFTER revoke.
   sudo -k
-  ak.sh.ok "temporary passwordless sudo revoked" "SUDO"
+
+  # Tell the truth: if sudo is STILL passwordless after we removed our grant and
+  # cleared the cached timestamp, it comes from another sudoers rule we don't
+  # control — revoke could not, and cannot, take that away.
+  if __ak.sudo.passwordless; then
+    ak.sh.warn "ak grant removed, but passwordless sudo PERSISTS via another sudoers rule (not managed by ak.sudo) — revoke cannot take it away."
+  else
+    ak.sh.ok "temporary passwordless sudo revoked" "SUDO"
+  fi
 }
 
 ##
@@ -122,9 +157,14 @@ function ak.sudo.status() {
   __ak.sudo.preflight || return 1
 
   # The grant IS the sudoers drop-in — check the file, not just `sudo -n true`,
-  # which can also succeed purely from sudo's cached credential timestamp.
-  if ! sudo -n test -f "${AK_SUDO_FILE}" 2> /dev/null; then
-    echo "inactive — no active grant (sudoers drop-in not present)"
+  # which can also succeed purely from sudo's cached credential timestamp or a
+  # standing NOPASSWD rule.
+  if ! __ak.sudo.granted; then
+    if __ak.sudo.passwordless; then
+      ak.sh.warn "no ak grant — but passwordless sudo IS available via another sudoers rule (not managed by ak.sudo)."
+    else
+      echo "inactive — no active grant (sudoers drop-in not present)"
+    fi
     return 0
   fi
 
