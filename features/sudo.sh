@@ -111,15 +111,26 @@ function ak.sudo.revoke() {
 }
 
 ##
-# Report whether the temporary grant is active and when it auto-revokes.
+# Report whether the temporary grant is active and how much time remains.
 ##
 function ak.sudo.status() {
   __ak.sudo.preflight || return 1
 
-  if sudo -n true 2> /dev/null; then
-    ak.sh.ok "passwordless sudo currently available for '$(id -un)'" "ACTIVE"
-    systemctl list-timers "${AK_SUDO_UNIT}.timer" --all --no-pager 2> /dev/null | sed -n '1,2p'
-  else
+  if ! sudo -n true 2>/dev/null; then
     echo "inactive — sudo requires a password (no active grant)"
+    return 0
   fi
+
+  local -r user="$(id -un)"
+  local remaining=""
+
+  # systemctl status renders: "Trigger: <date>; 23min 14s left"
+  local timer_status trigger_re
+  timer_status="$(systemctl status "${AK_SUDO_UNIT}.timer" 2>/dev/null)"
+  trigger_re='Trigger:[^;]+;[[:space:]]*(.+left)'
+  if [[ "${timer_status}" =~ ${trigger_re} ]]; then
+    remaining=" — ${BASH_REMATCH[1]}"
+  fi
+
+  ak.sh.ok "passwordless sudo available for '${user}'${remaining}" "ACTIVE"
 }
