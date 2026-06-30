@@ -107,6 +107,11 @@ function ak.sudo.revoke() {
     ak.sh.err "ak.sudo.revoke: ${AK_SUDO_FILE} still present — remove it manually."
     return 1
   fi
+
+  # Invalidate sudo's cached credential timestamp. Without this, removing the
+  # sudoers drop-in is NOT enough: sudo keeps honoring the cached timestamp
+  # (timestamp_timeout, default 15m) so passwordless sudo stays live AFTER revoke.
+  sudo -k
   ak.sh.ok "temporary passwordless sudo revoked" "SUDO"
 }
 
@@ -116,8 +121,10 @@ function ak.sudo.revoke() {
 function ak.sudo.status() {
   __ak.sudo.preflight || return 1
 
-  if ! sudo -n true 2>/dev/null; then
-    echo "inactive — sudo requires a password (no active grant)"
+  # The grant IS the sudoers drop-in — check the file, not just `sudo -n true`,
+  # which can also succeed purely from sudo's cached credential timestamp.
+  if ! sudo -n test -f "${AK_SUDO_FILE}" 2> /dev/null; then
+    echo "inactive — no active grant (sudoers drop-in not present)"
     return 0
   fi
 
