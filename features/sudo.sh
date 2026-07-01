@@ -52,6 +52,16 @@ function __ak.sudo.granted() {
   sudo -n test -f "${AK_SUDO_FILE}" 2> /dev/null
 }
 
+# True if the user has a STANDING NOPASSWD rule — one NOT lent by ak. `sudo -l`
+# prints the effective sudoers policy, which reflects the RULES, not the cached
+# credential timestamp, so this cleanly separates "a real standing rule" from
+# "sudo just happens to be passwordless right now because of a recent sudo".
+# The `NOPASSWD` token is a sudoers keyword (never localized). Callers use it
+# only when __ak.sudo.granted is false, so ak's own line can't match.
+function __ak.sudo.hasStandingNopasswdRule() {
+  sudo -n -l 2> /dev/null | grep -q 'NOPASSWD'
+}
+
 # ── auto-revoke facility (OS-abstracted) ─────────────────────────────────────
 
 # Render the macOS self-destructing LaunchDaemon plist to stdout. Pure (no side
@@ -166,10 +176,11 @@ function ak.sudo.lend() {
   local -r user="$(id -un)"
   local -r line="${user} ALL=(ALL) NOPASSWD: ALL"
 
-  # Heads-up: if sudo is ALREADY passwordless before we lend (and it isn't our own
-  # prior grant), a STANDING rule grants it permanently. Lending is then cosmetic —
-  # ak.sudo.revoke / the auto-revoke timer only remove ak's file, never that rule.
-  if ! __ak.sudo.granted && __ak.sudo.passwordless; then
+  # Heads-up: if a STANDING NOPASSWD rule (NOT ak's) already grants passwordless
+  # sudo, lending is cosmetic — ak.sudo.revoke / the auto-revoke timer only remove
+  # ak's file, never that rule. A lingering credential cache is NOT a rule, so we
+  # probe the policy via `sudo -l`, not `sudo -n true`.
+  if ! __ak.sudo.granted && __ak.sudo.hasStandingNopasswdRule; then
     ak.sh.warn "passwordless sudo is ALREADY available via a standing sudoers rule (not ak) — ak.sudo.revoke / auto-revoke will NOT remove it."
   fi
 
@@ -217,8 +228,14 @@ function ak.sudo.revoke() {
   # revoke — bail BEFORE touching sudo so an idle call never prompts.
   if ! __ak.sudo.granted; then
     echo "ak.sudo.revoke: nothing to revoke — no ak grant (${AK_SUDO_FILE} absent)."
-    if __ak.sudo.passwordless; then
+    if __ak.sudo.hasStandingNopasswdRule; then
       ak.sh.warn "but passwordless sudo IS still available via a rule NOT managed by ak.sudo (e.g. another /etc/sudoers.d/* file) — revoke cannot remove that."
+    elif __ak.sudo.passwordless; then
+      # File gone but sudo still passwordless with no standing rule = a leftover
+      # credential cache (often from a just-expired ak grant). Clear it so revoke
+      # is real. `sudo -k` never prompts, so this stays safe for an idle call.
+      sudo -k
+      ak.sh.ok "cleared a lingering sudo credential cache (no ak grant was present)" "SUDO"
     fi
     return 0
   fi
@@ -256,8 +273,10 @@ function ak.sudo.status() {
   # which can also succeed purely from sudo's cached credential timestamp or a
   # standing NOPASSWD rule.
   if ! __ak.sudo.granted; then
-    if __ak.sudo.passwordless; then
+    if __ak.sudo.hasStandingNopasswdRule; then
       ak.sh.warn "no ak grant — but passwordless sudo IS available via another sudoers rule (not managed by ak.sudo)."
+    elif __ak.sudo.passwordless; then
+      echo "inactive — ak grant revoked; sudo is still cached (run 'sudo -k' to require a password now)."
     else
       echo "inactive — no active grant (sudoers drop-in not present)"
     fi
