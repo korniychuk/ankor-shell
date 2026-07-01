@@ -2,12 +2,13 @@
 
 ##
 # ak.sudo.* — lend the CURRENT user temporary passwordless sudo, time-boxed with
-# an automatic revoke (systemd timer) as a safety net. Linux + sudo + systemd.
+# an automatic revoke as a safety net. Linux (systemd) + macOS (launchd) + sudo.
 #
 # Purpose: let an automation/agent (or a quick maintenance window) run privileged
 # commands for a BOUNDED time WITHOUT ever sharing your password. You run
-# `ak.sudo.lend` once (typing your password a single time); a transient systemd
-# timer auto-revokes the grant after N minutes, or call `ak.sudo.revoke`.
+# `ak.sudo.lend` once (typing your password a single time); a transient auto-revoke
+# job (systemd timer on Linux, a self-destructing LaunchDaemon on macOS) removes
+# the grant after N minutes, or call `ak.sudo.revoke`.
 #
 # @example
 #   ak.sudo.lend            # grant for 30 min (default)
@@ -20,11 +21,13 @@
 ##
 
 declare -r AK_SUDO_FILE="/etc/sudoers.d/99-ak-temp-sudo"
-declare -r AK_SUDO_UNIT="ak-sudo-revoke"
+declare -r AK_SUDO_UNIT="ak-sudo-revoke"                          # Linux: transient systemd unit
+declare -r AK_SUDO_LABEL="com.ankor.ak-sudo-revoke"               # macOS: launchd job label
+declare -r AK_SUDO_PLIST="/Library/LaunchDaemons/${AK_SUDO_LABEL}.plist"
 
 function __ak.sudo.preflight() {
-  if ! ak.os.type.isLinux; then
-    ak.sh.err "ak.sudo.* is Linux-only (needs /etc/sudoers.d + systemd)."
+  if ! ak.os.type.isLinux && ! ak.os.type.isMacOS; then
+    ak.sh.err "ak.sudo.* supports Linux (systemd) and macOS (launchd) only."
     return 1
   fi
   if ! ak.sh.commandExists sudo; then
@@ -42,17 +45,113 @@ function __ak.sudo.passwordless() {
 }
 
 # True if OUR temp drop-in is present — the single source of truth for an ak
-# grant. Statting it needs passwordless sudo (the dir is root:root 0750); if sudo
+# grant. Statting it needs passwordless sudo (the dir is root-owned); if sudo
 # would prompt, there cannot be an active passwordless ak grant anyway, so a
 # silent failure correctly reads as "absent".
 function __ak.sudo.granted() {
   sudo -n test -f "${AK_SUDO_FILE}" 2> /dev/null
 }
 
+# ── auto-revoke facility (OS-abstracted) ─────────────────────────────────────
+
+# Render the macOS self-destructing LaunchDaemon plist to stdout. Pure (no side
+# effects) so it can be validated with `plutil -lint`. launchd has no one-shot
+# "run in N minutes", so we bake an absolute deadline (AKDL, epoch seconds): the
+# job sleeps the remaining time, removes the grant, then deregisters + deletes
+# itself. Reboot-safe: RunAtLoad re-runs it and it recomputes the remaining sleep
+# (or removes the grant immediately if the deadline already passed).
+function __ak.sudo.macos.renderPlist() {
+  local -r deadline="$1"
+  # Order matters: remove the grant AND self-delete the plist BEFORE bootout —
+  # bootout SIGTERMs this very process, so anything after it may never run.
+  local -r job="AKDL=${deadline}; n=\$(date +%s); if [ \"\$n\" -lt \"\$AKDL\" ]; then sleep \$(( AKDL - n )); fi; /bin/rm -f '${AK_SUDO_FILE}'; /bin/rm -f '${AK_SUDO_PLIST}'; /bin/launchctl bootout system/${AK_SUDO_LABEL} 2>/dev/null"
+  cat <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>${AK_SUDO_LABEL}</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>-c</string>
+		<string>${job}</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+</dict>
+</plist>
+PLIST
+}
+
+# Arm the auto-revoke safety net for <mins>. Idempotent: re-arming RESETS the
+# window. Returns: 0 armed · 1 arm failed · 2 no facility (manual revoke needed).
+function __ak.sudo.timer.arm() {
+  local -r mins="$1"
+
+  if ak.os.type.isLinux; then
+    ak.sh.commandExists systemd-run || return 2
+    # Fully clear any prior transient unit first, so re-lending just RESETS the
+    # window instead of failing on "Unit already exists".
+    sudo systemctl stop "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
+    sudo systemctl reset-failed "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
+    sudo systemd-run --quiet --unit="${AK_SUDO_UNIT}" --on-active="${mins}min" \
+      /bin/rm -f "${AK_SUDO_FILE}"
+    return
+  fi
+
+  # macOS
+  ak.sh.commandExists launchctl || return 2
+  local -r deadline="$(( $(date +%s) + mins * 60 ))"
+  # Reset any prior window first so re-lending is idempotent.
+  sudo launchctl bootout "system/${AK_SUDO_LABEL}" 2> /dev/null
+  if ! __ak.sudo.macos.renderPlist "${deadline}" | sudo tee "${AK_SUDO_PLIST}" > /dev/null; then
+    return 1
+  fi
+  sudo chown 0:0 "${AK_SUDO_PLIST}"      # root:wheel — launchd refuses non-root-owned daemons
+  sudo chmod 0644 "${AK_SUDO_PLIST}"
+  sudo launchctl bootstrap system "${AK_SUDO_PLIST}"
+}
+
+# Cancel + clean up the auto-revoke facility. Idempotent; never fails the caller.
+function __ak.sudo.timer.cancel() {
+  if ak.os.type.isLinux; then
+    sudo systemctl stop "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
+    sudo systemctl reset-failed "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
+    return 0
+  fi
+  sudo launchctl bootout "system/${AK_SUDO_LABEL}" 2> /dev/null
+  sudo rm -f "${AK_SUDO_PLIST}"
+  return 0
+}
+
+# Echo a human " — <time> left" suffix for status, or nothing when unknown.
+function __ak.sudo.timer.remaining() {
+  if ak.os.type.isLinux; then
+    # systemctl status renders: "Trigger: <date>; 23min 14s left"
+    local timer_status trigger_re
+    timer_status="$(systemctl status "${AK_SUDO_UNIT}.timer" 2> /dev/null)"
+    trigger_re='Trigger:[^;]+;[[:space:]]*(.+left)'
+    [[ "${timer_status}" =~ ${trigger_re} ]] && printf ' — %s' "${BASH_REMATCH[1]}"
+    return 0
+  fi
+
+  # macOS: recover the deadline epoch baked into the (world-readable) plist.
+  [[ -f "${AK_SUDO_PLIST}" ]] || return 0
+  local dl now left
+  dl="$(grep -oE 'AKDL=[0-9]+' "${AK_SUDO_PLIST}" 2> /dev/null | head -n1 | cut -d= -f2)"
+  [[ -n "${dl}" ]] || return 0
+  now="$(date +%s)"
+  (( dl > now )) || return 0
+  left=$(( dl - now ))
+  printf ' — %dm %ds left' "$(( left / 60 ))" "$(( left % 60 ))"
+}
+
 ##
 # Grant passwordless sudo to the current user for N minutes (default 30, range 1..1440).
 # Prompts for your password ONCE (the first sudo). Auto-revokes via a transient
-# systemd timer; re-running re-arms the window.
+# timer (systemd on Linux, launchd on macOS); re-running re-arms the window.
 # @param $1 minutes (optional, default 30)
 ##
 function ak.sudo.lend() {
@@ -81,7 +180,7 @@ function ak.sudo.lend() {
     ak.sh.err "ak.sudo.lend: failed to write ${AK_SUDO_FILE}"
     return 1
   fi
-  sudo chown root:root "${AK_SUDO_FILE}"
+  sudo chown 0:0 "${AK_SUDO_FILE}"       # root:root (Linux) / root:wheel (macOS) — numeric = portable
   sudo chmod 0440 "${AK_SUDO_FILE}"
   if ! sudo visudo -cf "${AK_SUDO_FILE}" > /dev/null; then
     sudo rm -f "${AK_SUDO_FILE}"
@@ -89,22 +188,20 @@ function ak.sudo.lend() {
     return 1
   fi
 
-  # (Re)arm the auto-revoke timer. Idempotent: fully clear any prior transient unit
-  # (timer + service) first, so calling ak.sudo.lend several times in a row just
-  # RESETS the window instead of failing on "Unit already exists".
-  sudo systemctl stop "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
-  sudo systemctl reset-failed "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
-  if ak.sh.commandExists systemd-run; then
-    if sudo systemd-run --quiet --unit="${AK_SUDO_UNIT}" --on-active="${mins}min" \
-         /bin/rm -f "${AK_SUDO_FILE}"; then
+  # (Re)arm the auto-revoke safety net. Idempotent: re-running RESETS the window.
+  __ak.sudo.timer.arm "${mins}"
+  case "$?" in
+    0)
       ak.sh.ok "passwordless sudo lent to '${user}' for ${mins}m — auto-revokes, or run ak.sudo.revoke" "SUDO"
-    else
+      ;;
+    2)
+      ak.sh.warn "no auto-revoke facility available: NO auto-revoke scheduled — you MUST run ak.sudo.revoke!"
+      ak.sh.ok "passwordless sudo lent to '${user}' (manual revoke required)" "SUDO"
+      ;;
+    *)
       ak.sh.warn "grant active but auto-revoke timer failed to arm — run ak.sudo.revoke when done!"
-    fi
-  else
-    ak.sh.warn "systemd-run unavailable: NO auto-revoke scheduled — you MUST run ak.sudo.revoke!"
-    ak.sh.ok "passwordless sudo lent to '${user}' (manual revoke required)" "SUDO"
-  fi
+      ;;
+  esac
 }
 
 ##
@@ -126,8 +223,7 @@ function ak.sudo.revoke() {
     return 0
   fi
 
-  sudo systemctl stop "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
-  sudo systemctl reset-failed "${AK_SUDO_UNIT}.timer" "${AK_SUDO_UNIT}.service" 2> /dev/null
+  __ak.sudo.timer.cancel
   sudo rm -f "${AK_SUDO_FILE}"
 
   if __ak.sudo.granted; then
@@ -169,15 +265,7 @@ function ak.sudo.status() {
   fi
 
   local -r user="$(id -un)"
-  local remaining=""
-
-  # systemctl status renders: "Trigger: <date>; 23min 14s left"
-  local timer_status trigger_re
-  timer_status="$(systemctl status "${AK_SUDO_UNIT}.timer" 2>/dev/null)"
-  trigger_re='Trigger:[^;]+;[[:space:]]*(.+left)'
-  if [[ "${timer_status}" =~ ${trigger_re} ]]; then
-    remaining=" — ${BASH_REMATCH[1]}"
-  fi
+  local -r remaining="$(__ak.sudo.timer.remaining)"
 
   ak.sh.ok "passwordless sudo available for '${user}'${remaining}" "ACTIVE"
 }
