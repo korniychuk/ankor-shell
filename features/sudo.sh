@@ -52,14 +52,22 @@ function __ak.sudo.granted() {
   sudo -n test -f "${AK_SUDO_FILE}" 2> /dev/null
 }
 
-# True if the user has a STANDING NOPASSWD rule — one NOT lent by ak. `sudo -l`
-# prints the effective sudoers policy, which reflects the RULES, not the cached
-# credential timestamp, so this cleanly separates "a real standing rule" from
-# "sudo just happens to be passwordless right now because of a recent sudo".
-# The `NOPASSWD` token is a sudoers keyword (never localized). Callers use it
-# only when __ak.sudo.granted is false, so ak's own line can't match.
+# True if the user has a STANDING NOPASSWD rule granting FULL passwordless sudo —
+# one NOT lent by ak. `sudo -l` prints the effective sudoers policy, which
+# reflects the RULES, not the cached credential timestamp, so this cleanly
+# separates "a real standing rule" from "sudo just happens to be passwordless
+# right now because of a recent sudo".
+#
+# Match `NOPASSWD: ALL`, NOT a bare `NOPASSWD` token: a command-SCOPED rule like
+# `(root) NOPASSWD: /usr/local/sbin/foo` is passwordless for ONE command only, not
+# general sudo, so it must NOT trigger the "passwordless sudo is available" warning.
+# The trailing `([[:space:]]|,|$)` anchors the `ALL` keyword so a command path such
+# as `/opt/INSTALL_thing` or a `NOPASSWD: ALLOW_ME` rule can't false-positive. All
+# tokens are POSIX ERE — portable across GNU grep (Linux) and BSD grep (macOS).
+# `NOPASSWD`/`ALL` are sudoers keywords (never localized). Callers use this only
+# when __ak.sudo.granted is false, so ak's own `NOPASSWD: ALL` line can't match.
 function __ak.sudo.hasStandingNopasswdRule() {
-  sudo -n -l 2> /dev/null | grep -q 'NOPASSWD'
+  sudo -n -l 2> /dev/null | grep -Eq 'NOPASSWD:[[:space:]]*ALL([[:space:]]|,|$)'
 }
 
 # ── auto-revoke facility (OS-abstracted) ─────────────────────────────────────
