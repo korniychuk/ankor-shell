@@ -18,6 +18,12 @@
 #
 # One-shot from another machine (function lives in an interactive rc):
 #   ssh -t HOST 'bash -lic "ak.sudo.lend 60"'
+#
+# The OUTER quotes are mandatory. `ssh` joins its argv into ONE string that the
+# remote login shell re-parses, so `ssh -t HOST bash -lic 'ak.sudo.lend 60'`
+# arrives as `bash -lic ak.sudo.lend 60` — and `bash -c`'s first operand is $0,
+# not $1, so the minutes would silently fall back to the default. ak.sudo.lend
+# detects that exact shape and refuses (see the $0 guard below).
 ##
 
 declare -r AK_SUDO_FILE="/etc/sudoers.d/99-ak-temp-sudo"
@@ -144,6 +150,16 @@ function __ak.sudo.timer.cancel() {
   return 0
 }
 
+# Echo the wall-clock time <mins> from now as HH:MM — so the grant message states
+# an absolute deadline, not just a duration (a wrong window is then obvious at a
+# glance). BSD date takes an epoch via `-r`, GNU via `-d @…`; try BSD first since
+# GNU's `-r` means "reference FILE" and simply fails here. Best-effort: prints
+# nothing if neither works, and callers treat that as "no suffix".
+function __ak.sudo.deadlineClock() {
+  local -r epoch="$(( $(date +%s) + $1 * 60 ))"
+  date -r "${epoch}" '+%H:%M' 2> /dev/null || date -d "@${epoch}" '+%H:%M' 2> /dev/null
+}
+
 # Echo a human " — <time> left" suffix for status, or nothing when unknown.
 function __ak.sudo.timer.remaining() {
   if ak.os.type.isLinux; then
@@ -174,6 +190,23 @@ function __ak.sudo.timer.remaining() {
 ##
 function ak.sudo.lend() {
   __ak.sudo.preflight || return 1
+
+  # Catch the collapsed-quoting remote invocation BEFORE defaulting to 30m:
+  #   ssh -t HOST bash -lic 'ak.sudo.lend 15'  →  remote: bash -lic ak.sudo.lend 15
+  # ssh re-joins its argv into one string, the inner quotes are gone, and `bash -c`
+  # binds that trailing `15` to $0 — never to $1. Without this guard the caller
+  # asks for 15m and silently gets the 30m default: a LONGER privileged window
+  # than requested, the one failure direction that must never be silent.
+  # $0 is a shell name/path (bash under `bash -c`, the function name under zsh),
+  # so a bare number there can only come from this mistake — no false positives.
+  if (( $# == 0 )) && [[ "$0" =~ ^[0-9]+$ ]]; then
+    ak.sh.err "ak.sudo.lend: '$0' arrived as \$0, not as an argument — the remote command lost its quotes. Use: ssh -t HOST 'bash -lic \"ak.sudo.lend $0\"'"
+    return 1
+  fi
+  if (( $# > 1 )); then
+    ak.sh.err "Usage: ak.sudo.lend [minutes 1..1440]  (default 30) — got $# arguments"
+    return 1
+  fi
 
   local -r mins="${1:-30}"
   if [[ ! "${mins}" =~ ^[0-9]+$ ]] || (( mins < 1 || mins > 1440 )); then
@@ -208,10 +241,11 @@ function ak.sudo.lend() {
   fi
 
   # (Re)arm the auto-revoke safety net. Idempotent: re-running RESETS the window.
+  local -r deadlineClock="$(__ak.sudo.deadlineClock "${mins}")"
   __ak.sudo.timer.arm "${mins}"
   case "$?" in
     0)
-      ak.sh.ok "passwordless sudo lent to '${user}' for ${mins}m — auto-revokes, or run ak.sudo.revoke" "SUDO"
+      ak.sh.ok "passwordless sudo lent to '${user}' for ${mins}m${deadlineClock:+ (until ${deadlineClock})} — auto-revokes, or run ak.sudo.revoke" "SUDO"
       ;;
     2)
       ak.sh.warn "no auto-revoke facility available: NO auto-revoke scheduled — you MUST run ak.sudo.revoke!"
