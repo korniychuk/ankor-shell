@@ -350,6 +350,61 @@ function ak.sh.debounce() {
 }
 
 ##
+# Run a command with a time limit.
+# Uses `timeout`/`gtimeout` when available; otherwise falls back to a
+# background run + watchdog subshell (stock macOS ships no `timeout`).
+#
+# @param {integer} *seconds time limit in whole seconds
+# @param {string}  *command command with its arguments
+#
+# @returns 124 when the limit fired (GNU timeout convention), otherwise the
+#          command's own exit code
+#
+# @example
+#
+#   ak.sh.timeout 15 ssh -T host uptime
+#
+##
+function ak.sh.timeout() {
+  local -r seconds="${1:-}"
+  if [[ ! "${seconds}" =~ ^[0-9]+$ ]] || (( $# < 2 )); then
+    ak.sh.err "Usage: ak.sh.timeout <seconds> <command> [args...]"
+    return 1
+  fi
+  shift
+
+  if ak.sh.commandExists timeout; then
+    timeout "${seconds}" "$@"
+    return $?
+  fi
+  if ak.sh.commandExists gtimeout; then
+    gtimeout "${seconds}" "$@"
+    return $?
+  fi
+
+  # Fallback: run in background, watchdog kills it at the deadline.
+  local -r startedAt="$(date +%s)"
+  "$@" &
+  local -r cmdPid=$!
+  ( sleep "${seconds}"; kill -TERM "${cmdPid}" 2> /dev/null ) &
+  local -r watchdogPid=$!
+
+  local rc=0
+  wait "${cmdPid}"
+  rc=$?
+  kill "${watchdogPid}" 2> /dev/null
+  wait "${watchdogPid}" 2> /dev/null
+
+  # Death by signal at/after the deadline is attributed to the watchdog. This
+  # heuristic can mislabel a command that dies from its OWN signal after the
+  # deadline — acceptable for a fallback path.
+  if (( rc > 128 )) && (( $(date +%s) - startedAt >= seconds )); then
+    rc=124
+  fi
+  return ${rc}
+}
+
+##
 # Test all features that a terminal should support
 # @See https://hellricer.github.io/2019/10/05/test-drive-your-terminal.html
 ##

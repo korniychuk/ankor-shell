@@ -63,6 +63,7 @@ source "${AK_SCRIPT_PATH}/sdk/os.sh"
 source "${AK_SCRIPT_PATH}/sdk/dt.sh"
 source "${AK_SCRIPT_PATH}/sdk/git.sh"
 source "${AK_SCRIPT_PATH}/sdk/inet.sh"
+source "${AK_SCRIPT_PATH}/sdk/ssh.sh"
 source "${AK_SCRIPT_PATH}/sdk/updater.sh"
 source "${AK_SCRIPT_PATH}/sdk/docker.sh"
 source "${AK_SCRIPT_PATH}/sdk/downloader.sh"
@@ -73,3 +74,6 @@ fi
 
 # Features (loaded after SDK)
 source "${AK_SCRIPT_PATH}/features/sudo.sh"
+
+# Shell completions (loaded after features; must never break the library)
+source "${AK_SCRIPT_PATH}/completions/load.sh"

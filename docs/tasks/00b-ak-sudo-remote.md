@@ -1,8 +1,9 @@
 ---
 id: 00b
 type: task
-status: ready
+status: done
 created: 2026-08-01
+completed: 2026-08-01
 ---
 
 # 00b — `ak.sudo.remote-*`: удалённый lend/revoke/status + обзор по всем хостам, с автодополнением SSH
@@ -164,6 +165,18 @@ ssh -t -o ConnectTimeout="${AK_SUDO_REMOTE_TIMEOUT:-10}" -- "${host}" "bash -lic
 - Реальный прогон на `vps-india`: `remote-lend 5` → `remote-status` → `remote-status-all` (этот хост зелёный, остальные красные) → `remote-revoke` → `remote-status-all` (все красные).
 - `remote-status-all` с заведомо мёртвым хостом в конфиге — жёлтый, укладывается в таймаут, общее время ≈ времени самого медленного хоста (доказательство параллельности), Ctrl-C посреди опроса не оставляет временного каталога.
 - Негатив: несуществующий хост (255), `remote-lend host 0` и `host 9999` — локальная ошибка валидации без сетевого вызова.
+
+## Реализация (2026-08-01)
+
+Выполнено по плану: `sdk/ssh.sh`, `ak.sh.timeout`, `--porcelain` + `__ak.sudo.timer.deadlineEpoch` (Linux-ветка парсит календарный вывод `systemctl show` обратно в epoch через GNU `date -d`), четыре `remote-*` команды, `completions/{zsh,bash}` + загрузчик `completions/load.sh` в `index.sh`. Отклонения от плана — только дополнения:
+
+- zsh-ловушка: незакавыченный `=*` в `[[ … == =* ]]` триггерит equals-expansion (`=cmd`) — в `sdk/ssh.sh` паттерн взят в кавычки `'='*`.
+- INT/TERM-trap в `remote-status-all` перед выходом гасит фоновые per-host job'ы (`kill $(jobs -p)`): иначе недобитый job дописывает свой `.rc` параллельно с `rm -rf` и каталог остаётся (ENOTEMPTY).
+- `ak.ssh.hosts.described` при заданном `AK_SSH_CONFIG` обходит кэш целиком (тестовый режим не отравляет боевой кэш фиксированного имени).
+
+Проверено автоматически (bash 5.3 + zsh 5.9): синтаксис и source в обоих шеллах; `ak.ssh.hosts` = 11 хостов основного конфига + `orb` из OrbStack Include, без `*`/`198.51.100.* lan-*`; `describe lan-desktop` → `anton@198.51.100.4` (эффективный конфиг, протекания нет); Include-glob, `=`-разделитель, несколько имён в `Host`, WARN на нечитаемый Include и на цикл (depth 16); инвалидация кэша по mtime конфига и Include-файлов; `ak.sh.timeout` — обе ветки (GNU и watchdog-fallback), rc 124/0/проброс; локальная валидация minutes без сетевого вызова; `--porcelain` → `granted=0`; несуществующий хост → ERR + rc 255; `remote-status-all` — 12 хостов за ~6.5 с (параллельность), нет остаточных temp-каталогов после нормального выхода и после INT; регистрация compdef/complete и zstyle.
+
+Осталось вручную (нужен tty/интерактив): `remote-lend 5` → `remote-status` → `remote-revoke` на `vps-india`; вид `<TAB>`-меню в fzf-tab. Примечание: пока удалённые хосты не обновят ankor-shell (`ak.updater`), `status-all` показывает их серым `ankor-shell outdated` — у них ещё нет `--porcelain`; это ожидаемое поведение.
 
 ## Связи
 
