@@ -47,6 +47,20 @@ There is no build step, no package manager, no test framework, and no linter con
 - `AK_CALS_CUSTOM_SCRIPTS_PATH`, `AK_CALS_LOCAL_SCRIPTS_PATH` — script directories
 - Color constants in `sdk/shell.sh`: `Red`, `Green`, `Yellow`, `Blue`, `Magenta`, `Cyan`, `Gray`, `NC` (No Color)
 
+## Privacy — this repository is PUBLIC
+
+Never commit real infrastructure identifiers, in code examples, doc-comments or task docs
+alike: host aliases, internal or public IP addresses, private DNS suffixes, mesh/VPN
+subnets, or the SSH usernames paired with them. Together they are a map of the operator's
+fleet, and the whole history is world-readable.
+
+Use placeholders instead — `vps-alpha`/`lan-admin` for hosts, `*.example.internal` for a
+private suffix, and the RFC 5737 documentation ranges for addresses (`198.51.100.0/24`,
+`203.0.113.0/24`, `192.0.2.0/24`). Real values belong in the private infrastructure repo.
+
+Before committing, grep the staged diff for the fleet's real names and for digits shaped
+like an address. This rule was written after a history rewrite removed exactly such data.
+
 ## Coding Conventions
 
 - Use `declare -r` / `local -r` for readonly variables

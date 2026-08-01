@@ -23,7 +23,7 @@ ssh -t vps-golf "bash -lic 'ak.sudo.lend 15'"
 
 ```bash
 ak.sudo.remote-lend vps-ind<TAB> 20     # grant на 20 минут
-ak.sudo.remote-lend vps-golf  # дефолт удалённой стороны (30m)
+ak.sudo.remote-lend vps-golf            # дефолт удалённой стороны (30m)
 ak.sudo.remote-status vps-bravo
 ak.sudo.remote-revoke vps-india
 ak.sudo.remote-status-all               # обзор по всем хостам сразу
@@ -32,8 +32,8 @@ ak.sudo.remote-status-all               # обзор по всем хостам 
 `<TAB>` на позиции хоста даёт меню в том же виде, что уже настроено для `ssh` — alias слева, `user@hostname` справа через `→` (у оператора fzf-tab в tmux-попапе, то есть fuzzy-выбор):
 
 ```
-vps-alpha  → deploy@vps-alpha.example.internal
-lan-admin              → deploy@198.51.100.6
+vps-alpha → deploy@vps-alpha.example.internal
+lan-admin → deploy@198.51.100.6
 vps-bravo → deploy@203.0.113.10
 ```
 
@@ -42,10 +42,10 @@ vps-bravo → deploy@203.0.113.10
 `ak.sudo.remote-status-all` — параллельный опрос всех хостов, состояние на момент вызова (никакого кэша):
 
 ```
-vps-alpha   granted — 23m left (until 18:42)      ← зелёный
-vps-bravo  no grant                              ← красный
-lan-desktop              ankor-shell not installed             ← серый
-vps-delta              unreachable (timeout)                 ← жёлтый
+vps-alpha    granted — 23m left (until 18:42)  ← зелёный
+vps-bravo    no grant                          ← красный
+lan-desktop  ankor-shell not installed         ← серый
+vps-delta    unreachable (timeout)             ← жёлтый
 ```
 
 ## Решения (приняты, не пересматривать)
