@@ -170,7 +170,8 @@ ssh -t -o ConnectTimeout="${AK_SUDO_REMOTE_TIMEOUT:-10}" -- "${host}" "bash -lic
 
 Выполнено по плану: `sdk/ssh.sh`, `ak.sh.timeout`, `--porcelain` + `__ak.sudo.timer.deadlineEpoch` (Linux-ветка парсит календарный вывод `systemctl show` обратно в epoch через GNU `date -d`), четыре `remote-*` команды, `completions/{zsh,bash}` + загрузчик `completions/load.sh` в `index.sh`. Отклонения от плана — только дополнения:
 
-- zsh-ловушка: незакавыченный `=*` в `[[ … == =* ]]` триггерит equals-expansion (`=cmd`) — в `sdk/ssh.sh` паттерн взят в кавычки `'='*`.
+- zsh-ловушка №1: незакавыченный `=*` в `[[ … == =* ]]` триггерит equals-expansion (`=cmd`) — в `sdk/ssh.sh` паттерн взят в кавычки `'='*`.
+- zsh-ловушка №2 (найдена оператором при живом прогоне, фикс `f8cab6b`): голый `local host` печатает `host=''`, если параметр существует во внешней области — zsh без `TYPESET_SILENT`. Посторонняя строка попадала в отчёт `remote-status-all` и могла испортить машинный вывод `ak.ssh.*`. Теперь у каждого `local` в новом коде явный инициализатор; конвенция вынесена в backlog 002.
 - INT/TERM-trap в `remote-status-all` перед выходом гасит фоновые per-host job'ы (`kill $(jobs -p)`): иначе недобитый job дописывает свой `.rc` параллельно с `rm -rf` и каталог остаётся (ENOTEMPTY).
 - `ak.ssh.hosts.described` при заданном `AK_SSH_CONFIG` обходит кэш целиком (тестовый режим не отравляет боевой кэш фиксированного имени).
 
