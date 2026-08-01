@@ -11,7 +11,7 @@ function _ak_sudo_remote_bash() {
   COMPREPLY=()
 
   if (( COMP_CWORD == 1 )); then
-    local hosts
+    local hosts=''
     hosts="$(ak.ssh.hosts 2> /dev/null)"
     COMPREPLY=( $(compgen -W "${hosts}" -- "${cur}") )
     return 0

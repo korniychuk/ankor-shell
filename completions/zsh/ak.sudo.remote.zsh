@@ -11,8 +11,11 @@
 ##
 
 function _ak_sudo_remote() {
-  local -a hosts
-  local host description
+  # Initializers are mandatory: a bare `local name` prints `name=value` when the
+  # parameter exists in an enclosing scope (zsh without TYPESET_SILENT) — inside
+  # a completion widget that noise corrupts the menu.
+  local -a hosts=()
+  local host='' description=''
 
   case "${CURRENT}" in
     2)
