@@ -19,12 +19,17 @@ declare -r AK_SSH_INCLUDE_MAX_DEPTH=16
 # match (nullglob semantics). Works in both bash and zsh: glob expansion of a
 # pattern held in a VARIABLE has no portable syntax, so each shell gets its own
 # branch (the other shell never executes it, only parses it).
+#
+# NB (whole file): every `local` carries an explicit initializer. Zsh without
+# TYPESET_SILENT PRINTS `name=value` for a bare `local name` whose parameter
+# already exists in an enclosing scope — that noise would land in stdout and
+# corrupt these functions' machine-readable output.
 function __ak.ssh.globFiles() {
   local -r pattern="$1"
 
   if [[ -n "${ZSH_VERSION:-}" ]]; then
     setopt localoptions nullglob
-    local -a matches
+    local -a matches=()
     matches=( ${~pattern} )
     (( ${#matches[@]} > 0 )) && printf '%s\n' "${matches[@]}"
     return 0
@@ -53,7 +58,7 @@ function __ak.ssh.configFiles.walk() {
 
   printf '%s\n' "${file}"
 
-  local key rest word included
+  local key='' rest='' word='' included=''
   while read -r key rest || [[ -n "${key}" ]]; do
     # ssh_config keywords are case-insensitive; separator is whitespace or '='.
     case "${key}" in
@@ -99,7 +104,7 @@ function __ak.ssh.hostsFromFile() {
   local -r file="$1"
   [[ -r "${file}" ]] || return 0
 
-  local key rest name
+  local key='' rest='' name=''
   while read -r key rest || [[ -n "${key}" ]]; do
     case "${key}" in
       [Hh][Oo][Ss][Tt] | [Hh][Oo][Ss][Tt]=*) ;;
@@ -140,7 +145,7 @@ function __ak.ssh.hostsFromFile() {
 #   > vps-bravo
 ##
 function ak.ssh.hosts() {
-  local file
+  local file=''
   while IFS= read -r file; do
     __ak.ssh.hostsFromFile "${file}"
   done < <(__ak.ssh.configFiles) | sort -u
@@ -166,17 +171,16 @@ function ak.ssh.host.describe() {
     return 1
   fi
 
-  local -a cfgOpt
-  cfgOpt=()
+  local -a cfgOpt=()
   [[ -n "${AK_SSH_CONFIG:-}" ]] && cfgOpt=(-F "${AK_SSH_CONFIG}")
 
-  local out
+  local out=''
   if ! out="$(ssh -G "${cfgOpt[@]}" -- "${host}" 2> /dev/null)"; then
     # ssh -G needs OpenSSH >= 6.8 (2015) — on failure degrade to no description.
     return 0
   fi
 
-  local key value user='' hostName=''
+  local key='' value='' user='' hostName=''
   while read -r key value; do
     case "${key}" in
       user)     user="${value}"     ;;
@@ -192,7 +196,7 @@ function ak.ssh.host.describe() {
 # Print `host<TAB>user@hostname` for every connectable host (bare host when the
 # description is unavailable). Uncached worker for ak.ssh.hosts.described.
 function __ak.ssh.hosts.describeAll() {
-  local host description
+  local host='' description=''
   while IFS= read -r host; do
     [[ -n "${host}" ]] || continue
     description="$(ak.ssh.host.describe "${host}")"
@@ -227,7 +231,7 @@ function ak.ssh.hosts.described() {
 
   # Fresh = newer than EVERY config file in the effective list.
   if [[ -f "${cacheFile}" ]]; then
-    local stale=0 file
+    local stale=0 file=''
     while IFS= read -r file; do
       if [[ "${file}" -nt "${cacheFile}" ]]; then
         stale=1
@@ -240,7 +244,7 @@ function ak.ssh.hosts.described() {
     fi
   fi
 
-  local described
+  local described=''
   described="$(__ak.ssh.hosts.describeAll)"
 
   # Fixed name + atomic-ish tmp+mv: the file is overwritten, never grows, and a

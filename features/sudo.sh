@@ -186,7 +186,7 @@ function __ak.sudo.deadlineClock() {
 # in THEIR timezone.
 function __ak.sudo.timer.deadlineEpoch() {
   if ak.os.type.isLinux; then
-    local next
+    local next=''
     # systemctl show renders USec timestamps as calendar time
     # ("Fri 2026-08-01 18:42:00 UTC") — parse it back with GNU date (Linux-only path).
     next="$(systemctl show "${AK_SUDO_UNIT}.timer" -p NextElapseUSecRealtime --value 2> /dev/null)"
@@ -203,7 +203,10 @@ function __ak.sudo.timer.deadlineEpoch() {
 
 # Echo a human " — <time> left" suffix for status, or nothing when unknown.
 function __ak.sudo.timer.remaining() {
-  local dl now left
+  # Explicit initializers: zsh without TYPESET_SILENT prints `name=value` for a
+  # bare `local name` whose parameter exists in an enclosing scope — that noise
+  # would pollute this function's stdout.
+  local dl='' now='' left=''
   dl="$(__ak.sudo.timer.deadlineEpoch)"
   [[ "${dl}" =~ ^[0-9]+$ ]] || return 0
   now="$(date +%s)"
@@ -497,9 +500,12 @@ function ak.sudo.remote-status-all() {
     return 1
   fi
 
-  local -a hosts
-  hosts=()
-  local host
+  # Every `local` here carries an initializer on purpose: zsh without
+  # TYPESET_SILENT PRINTS `name=value` for a bare `local name` when the
+  # parameter already exists in an enclosing scope (that leaked a stray
+  # `host=''` line into this report).
+  local -a hosts=()
+  local host=''
   while IFS= read -r host; do
     [[ -n "${host}" ]] && hosts+=("${host}")
   done < <(ak.ssh.hosts)
@@ -513,7 +519,7 @@ function ak.sudo.remote-status-all() {
   # ALL exit paths (incl. Ctrl-C mid-poll), and background jobs stay silent in
   # interactive shells.
   (
-    local tmpDir
+    local tmpDir=''
     tmpDir="$(mktemp -d "${TMPDIR:-/tmp}/ak-sudo-status-all.XXXXXX")" || exit 1
     trap 'rm -rf "${tmpDir}"' EXIT
     # Reap the per-host jobs BEFORE the EXIT rm: a surviving job re-creating
@@ -529,7 +535,7 @@ function ak.sudo.remote-status-all() {
     # hung `bash -lic` after a successful connect needs its own deadline.
     local -r remoteCmd="bash -lic 'command -v ak.sudo.status > /dev/null || exit 127; ak.sudo.status --porcelain'"
     local -i i=0
-    local host
+    local host=''
     for host in "${hosts[@]}"; do
       i+=1
       (
@@ -558,7 +564,7 @@ function ak.sudo.remote-status-all() {
     fi
 
     local -i nGranted=0 nNoGrant=0 nUnreachable=0 nNoAk=0
-    local rc out line color label dl now left
+    local rc='' out='' line='' color='' label='' dl='' now='' left=''
     i=0
     for host in "${hosts[@]}"; do
       i+=1
