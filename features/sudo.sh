@@ -124,10 +124,17 @@ function __ak.sudo.macos.renderPlist() {
 PLIST
 }
 
-# Arm the auto-revoke safety net for <mins>. Idempotent: re-arming RESETS the
-# window. Returns: 0 armed · 1 arm failed · 2 no facility (manual revoke needed).
+# Arm the auto-revoke safety net for <mins>, expiring at <deadlineEpoch>.
+# Both are the SAME window expressed twice: systemd takes a duration, launchd an
+# absolute instant. The caller computes the epoch once and passes it in, so the
+# armed job, the recorded deadline and the message a user reads cannot disagree.
+# Idempotent: re-arming RESETS the window.
+# Returns: 0 armed · 1 arm failed · 2 no facility (manual revoke needed).
+# @param $1 minutes
+# @param $2 deadline epoch seconds
 function __ak.sudo.timer.arm() {
   local -r mins="$1"
+  local -r deadline="$2"
 
   if ak.os.type.isLinux; then
     ak.sh.commandExists systemd-run || return 2
@@ -142,7 +149,6 @@ function __ak.sudo.timer.arm() {
 
   # macOS
   ak.sh.commandExists launchctl || return 2
-  local -r deadline="$(( $(date +%s) + mins * 60 ))"
   # Reset any prior window first so re-lending is idempotent.
   sudo launchctl bootout "system/${AK_SUDO_LABEL}" 2> /dev/null
   if ! __ak.sudo.macos.renderPlist "${deadline}" | sudo tee "${AK_SUDO_PLIST}" > /dev/null; then
@@ -165,54 +171,92 @@ function __ak.sudo.timer.cancel() {
   return 0
 }
 
-# Echo an epoch as local wall-clock HH:MM. BSD date takes an epoch via `-r`,
-# GNU via `-d @…`; try BSD first since GNU's `-r` means "reference FILE" and
-# simply fails here. Best-effort: prints nothing if neither works, and callers
-# treat that as "no suffix".
+# Echo an epoch as wall-clock `HH:MM <TZ>` in the LOCAL zone of whoever calls it.
+# The zone label is not decoration: ak.sudo.remote-status renders on the remote
+# host (often UTC) while ak.sudo.remote-status-all renders the same deadline on
+# the operator's machine — without %Z the two outputs silently disagree.
+# BSD date takes an epoch via `-r`, GNU via `-d @…`; try BSD first since GNU's
+# `-r` means "reference FILE" and simply fails here. Best-effort: prints nothing
+# if neither works, and callers treat that as "no clock".
 function __ak.sudo.epochClock() {
-  date -r "$1" '+%H:%M' 2> /dev/null || date -d "@$1" '+%H:%M' 2> /dev/null
+  date -r "$1" '+%H:%M %Z' 2> /dev/null || date -d "@$1" '+%H:%M %Z' 2> /dev/null
 }
 
-# Echo the wall-clock time <mins> from now as HH:MM — so the grant message states
-# an absolute deadline, not just a duration (a wrong window is then obvious at a
-# glance).
-function __ak.sudo.deadlineClock() {
-  __ak.sudo.epochClock "$(( $(date +%s) + $1 * 60 ))"
+# Echo "<Xm Ys> left (until HH:MM TZ)" for a deadline epoch — the single wording
+# used by every status output, local and remote. Nothing when the deadline is
+# unknown or already past.
+# @param $1 deadline epoch seconds
+function __ak.sudo.formatRemaining() {
+  local -r dl="${1:-}"
+  [[ "${dl}" =~ ^[0-9]+$ ]] || return 0
+
+  local -r now="$(date +%s)"
+  (( dl > now )) || return 0
+
+  local -r left=$(( dl - now ))
+  local -r clock="$(__ak.sudo.epochClock "${dl}")"
+  printf '%dm %ds left%s' "$(( left / 60 ))" "$(( left % 60 ))" "${clock:+ (until ${clock})}"
+}
+
+# Record the auto-revoke deadline INSIDE the sudoers drop-in, as an inert comment.
+#
+# Why here and not in the OS facility: `systemd-run --on-active` arms a MONOTONIC
+# timer, whose only readable property (NextElapseUSecMonotonic) is a human string
+# relative to boot ("3d 16min 24.99s") — parsing that back into an epoch is exactly
+# the brittleness this deadline is supposed to remove. The drop-in, by contrast, is
+# ours, exact, identical on both OSes, and needs NO cleanup of its own: it dies with
+# the grant it describes (whoever removes the file removes the deadline with it).
+#
+# Callers MUST record only after the timer actually armed — a deadline nobody
+# enforces would be a lie in the dangerous direction.
+# @param $1 deadline epoch seconds
+function __ak.sudo.deadline.record() {
+  # Digits only, no exceptions: every `sudo` invocation on this machine re-parses
+  # this file, so the appended text must stay the exact shape verified against
+  # `visudo -cf` ("# AKDL=<digits>" — a comment, and never sudo's `#uid` form,
+  # which has no space). A malformed epoch is dropped, not written.
+  if [[ ! "${1:-}" =~ ^[0-9]+$ ]]; then
+    ak.sh.warn "refusing to record a non-numeric deadline '${1:-}' in ${AK_SUDO_FILE} — status will show no countdown."
+    return 1
+  fi
+
+  if ! printf '# AKDL=%s\n' "$1" | sudo tee -a "${AK_SUDO_FILE}" > /dev/null 2>&1; then
+    ak.sh.warn "could not record the deadline in ${AK_SUDO_FILE} — status will show the grant without a countdown."
+    return 1
+  fi
+  return 0
 }
 
 # Echo the auto-revoke deadline as epoch seconds, or nothing when unknown.
-# Linux: next elapse of the transient timer; macOS: AKDL baked into the plist.
-# Epoch (not "minutes left") so remote consumers can render the absolute time
-# in THEIR timezone.
+# Epoch (not "minutes left") so a remote consumer renders the absolute time in
+# ITS OWN timezone. Reading the drop-in needs passwordless sudo — which is
+# guaranteed exactly when there IS an active grant to report on.
 function __ak.sudo.timer.deadlineEpoch() {
-  if ak.os.type.isLinux; then
-    local next=''
-    # systemctl show renders USec timestamps as calendar time
-    # ("Fri 2026-08-01 18:42:00 UTC") — parse it back with GNU date (Linux-only path).
-    next="$(systemctl show "${AK_SUDO_UNIT}.timer" -p NextElapseUSecRealtime --value 2> /dev/null)"
-    [[ -n "${next}" && "${next}" != 'n/a' && "${next}" != 'infinity' ]] || return 0
-    date -d "${next}" '+%s' 2> /dev/null
+  local dl=''
+  dl="$(sudo -n grep -oE '^# AKDL=[0-9]+' "${AK_SUDO_FILE}" 2> /dev/null | head -n1 | cut -d= -f2)"
+  if [[ -n "${dl}" ]]; then
+    printf '%s\n' "${dl}"
     return 0
   fi
 
-  # macOS: recover the deadline epoch baked into the (world-readable) plist.
+  # Fallback for a grant lent by an older version (no AKDL comment yet): macOS
+  # bakes the same epoch into the world-readable plist. On Linux there is no such
+  # fallback — that grant simply reports no countdown until the next lend.
+  ak.os.type.isMacOS || return 0
   [[ -f "${AK_SUDO_PLIST}" ]] || return 0
   grep -oE 'AKDL=[0-9]+' "${AK_SUDO_PLIST}" 2> /dev/null | head -n1 | cut -d= -f2
   return 0
 }
 
-# Echo a human " — <time> left" suffix for status, or nothing when unknown.
+# Echo a human " — <time> left (until …)" suffix for status, or nothing when unknown.
 function __ak.sudo.timer.remaining() {
   # Explicit initializers: zsh without TYPESET_SILENT prints `name=value` for a
   # bare `local name` whose parameter exists in an enclosing scope — that noise
   # would pollute this function's stdout.
-  local dl='' now='' left=''
-  dl="$(__ak.sudo.timer.deadlineEpoch)"
-  [[ "${dl}" =~ ^[0-9]+$ ]] || return 0
-  now="$(date +%s)"
-  (( dl > now )) || return 0
-  left=$(( dl - now ))
-  printf ' — %dm %ds left' "$(( left / 60 ))" "$(( left % 60 ))"
+  local remaining=''
+  remaining="$(__ak.sudo.formatRemaining "$(__ak.sudo.timer.deadlineEpoch)")"
+  [[ -n "${remaining}" ]] && printf ' — %s' "${remaining}"
+  return 0
 }
 
 ##
@@ -274,10 +318,13 @@ function ak.sudo.lend() {
   fi
 
   # (Re)arm the auto-revoke safety net. Idempotent: re-running RESETS the window.
-  local -r deadlineClock="$(__ak.sudo.deadlineClock "${mins}")"
-  __ak.sudo.timer.arm "${mins}"
+  local -r deadlineEpoch="$(( $(date +%s) + mins * 60 ))"
+  local -r deadlineClock="$(__ak.sudo.epochClock "${deadlineEpoch}")"
+  __ak.sudo.timer.arm "${mins}" "${deadlineEpoch}"
   case "$?" in
     0)
+      # Only now — an armed timer is what makes the deadline true.
+      __ak.sudo.deadline.record "${deadlineEpoch}"
       ak.sh.ok "passwordless sudo lent to '${user}' for ${mins}m${deadlineClock:+ (until ${deadlineClock})} — auto-revokes, or run ak.sudo.revoke" "SUDO"
       ;;
     2)
@@ -564,7 +611,7 @@ function ak.sudo.remote-status-all() {
     fi
 
     local -i nGranted=0 nNoGrant=0 nUnreachable=0 nNoAk=0
-    local rc='' out='' line='' color='' label='' dl='' now='' left=''
+    local rc='' out='' line='' color='' label='' dl='' left=''
     i=0
     for host in "${hosts[@]}"; do
       i+=1
@@ -579,13 +626,12 @@ function ak.sudo.remote-status-all() {
         color="${cGray}"; label='ankor-shell not installed'; nNoAk+=1
       elif [[ "${line}" == granted=1* ]]; then
         color="${cGreen}"; label='granted'; nGranted+=1
+        # The remote sent an EPOCH, so the countdown and the wall-clock time are
+        # rendered here — in the operator's timezone, not the host's.
         dl="${line##*deadline_epoch=}"
         dl="${dl%%[![:digit:]]*}"
-        now="$(date +%s)"
-        if [[ "${dl}" =~ ^[0-9]+$ ]] && (( dl > now )); then
-          left=$(( (dl - now + 59) / 60 ))
-          label="granted — ${left}m left (until $(__ak.sudo.epochClock "${dl}"))"
-        fi
+        left="$(__ak.sudo.formatRemaining "${dl}")"
+        [[ -n "${left}" ]] && label="granted — ${left}"
       elif [[ "${line}" == granted=0* ]]; then
         color="${cRed}"; label='no grant'; nNoGrant+=1
       else
