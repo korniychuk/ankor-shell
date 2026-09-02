@@ -71,12 +71,50 @@ function ak.inet.firstIPOfHost() {
   ak.inet.IPsOfHost "${hostName}" | awk '{ print ; exit }'
 }
 
+#
+# Interactive ping: runs until `q` (or Ctrl+C) is pressed, so a wrapper that
+# embeds it (e.g. a herdr tab) needs no extra "press any key" step afterwards.
+# Falls back to plain foreground ping when stdin is not a terminal.
+# Works under bash and zsh (the key read differs — see below).
+#
+function __ak.inet.ping.interactive() {
+  local -r target="$1"; shift
+
+  if [[ ! -t 0 ]]; then
+    ping "${target}"
+    return $?
+  fi
+
+  local pingPid key
+  ping "${target}" &
+  pingPid=$!
+  # Ctrl+C: stop ping, restore the handler, leave. `kill` may race a ping that
+  # already died — that is fine, the error is ignored.
+  trap 'kill "${pingPid}" 2>/dev/null; trap - INT; return 130' INT
+
+  while kill -0 "${pingPid}" 2>/dev/null; do
+    key=''
+    if [[ -n "${ZSH_VERSION:-}" ]]; then
+      read -rs -k1 -t 0.2 key 2>/dev/null || true
+    else
+      read -rs -n1 -t 0.2 key 2>/dev/null || true
+    fi
+    if [[ "${key}" == 'q' || "${key}" == 'Q' ]]; then
+      kill "${pingPid}" 2>/dev/null
+      break
+    fi
+  done
+  trap - INT
+  wait "${pingPid}" 2>/dev/null
+  return 0
+}
+
 function ak.inet.ping.IPv4() {
-  ping 8.8.8.8
+  __ak.inet.ping.interactive 8.8.8.8
 }
 
 function ak.inet.ping.DNS() {
-  ping google.com
+  __ak.inet.ping.interactive google.com
 }
 
 #
