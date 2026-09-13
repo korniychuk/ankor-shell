@@ -1,7 +1,7 @@
 ---
 id: 00e
 type: task
-status: live-check
+status: done
 created: 2026-09-14
 ---
 
@@ -194,4 +194,6 @@ exit node. Сверить вердикты и что этап 1 занимает
        `DNSName` (`sg-ankor-main.infra.internal.`). Теперь печатается первая метка `DNSName`,
        `HostName` — лишь fallback. Сам hostname ОС `sg-ankor-main-new` на сервере остался
        (так же `ankor-gw`, `exit-sg-vultr`, `ankor-sg-main` у других узлов) — это вне задачи.
-  **Осталось:** повторить exit node on после фикса. После — `status: done`.
+- **Done 2026-09-14** — проверено оператором вручную (обычная сеть, Wi-Fi off, сломанный DNS,
+  exit node on). Повторный прогон exit node on **после** фикса `33cc2eb` не делался — фикс
+  покрыт офлайн-сценарием `vpn_scoped`; при расхождении вживую — переоткрыть.
