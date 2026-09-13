@@ -85,7 +85,7 @@ function __ak.inet.ping.interactive() {
     return $?
   fi
 
-  local pingPid key
+  local pingPid key rc=0 quit=0
   ping "${target}" &
   pingPid=$!
   # Ctrl+C: stop ping, restore the handler, leave. `kill` may race a ping that
@@ -101,12 +101,16 @@ function __ak.inet.ping.interactive() {
     fi
     if [[ "${key}" == 'q' || "${key}" == 'Q' ]]; then
       kill "${pingPid}" 2>/dev/null
+      quit=1
       break
     fi
   done
   trap - INT
-  wait "${pingPid}" 2>/dev/null
-  return 0
+  # `q` is a clean exit (0); a ping that died by itself (e.g. 68 = unknown host)
+  # keeps its status, so callers can tell a failure from a deliberate quit.
+  wait "${pingPid}" 2>/dev/null || rc=$?
+  (( quit )) && return 0
+  return "${rc}"
 }
 
 function ak.inet.ping.IPv4() {
