@@ -177,6 +177,21 @@ exit node. Сверить вердикты и что этап 1 занимает
   хвостовых пробелов, на Linux без `ip` — `[Skip]` для Link/Router.
 - Гейты: тесты bash + `zsh -f` зелёные (этап 1 ≈2,2 с при пробах по 1 с); `shellcheck`
   — только прежний SC2028 в `ak.inet.serve`.
-- Живая проверка оператора: обычная сеть в Herdr — OK (`=> Internet OK`).
-  **Осталось:** выключенный Wi-Fi, сломанный DNS, включённый exit node. После —
-  `status: done`.
+- Живая проверка оператора (2026-09-14, Herdr):
+  - обычная сеть — `=> Internet OK` ✅;
+  - Wi-Fi off — все пробы Fail, `=> No network link (Wi-Fi off / no DHCP lease)` ✅;
+  - сломанный DNS (`192.0.2.1`) — `DNS system` Fail, `@1.1.1.1`/`@8.8.8.8`/DoH OK,
+    `=> Local DNS resolver broken (router / VPN / Tailscale DNS)` ✅;
+  - exit node on — ❌ два бага, исправлены:
+    1. `Link`/`Router` Fail (`no physical default interface`) и неверный вердикт `No network
+       link` при рабочем интернете. Причина: при exit node primary default route = `utun4`,
+       а физический default macOS оставляет **только scoped** (`UGScIg en0`, флаг `I`);
+       fallback по `netstat -rn` отбрасывал scoped-маршруты. Теперь берётся unscoped `en*`,
+       иначе scoped. Фикстура теста была нереалистичной (unscoped `en0` рядом с `utun`) —
+       добавлен сценарий `vpn_scoped`.
+    2. Имя exit node `sg-ankor-main-new`: код брал `Peer.HostName` = hostname **ОС** узла
+       (задаётся на самой машине), а переименование в Headscale меняет только given name =
+       `DNSName` (`sg-ankor-main.infra.internal.`). Теперь печатается первая метка `DNSName`,
+       `HostName` — лишь fallback. Сам hostname ОС `sg-ankor-main-new` на сервере остался
+       (так же `ankor-gw`, `exit-sg-vultr`, `ankor-sg-main` у других узлов) — это вне задачи.
+  **Осталось:** повторить exit node on после фикса. После — `status: done`.

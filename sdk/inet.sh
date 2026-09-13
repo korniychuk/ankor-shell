@@ -291,7 +291,7 @@ function __ak.inet.check.topology() {
     __ak.inet.check.save route Info "$primary (VPN tunnel)"
     printf '%s\n' "$primary" > "$checkDir/tunnel"
     if [[ "$checkOS" == Darwin ]]; then
-      routes=$(__ak.inet.check.run netstat -rn -f inet 2>/dev/null | awk '$1=="default" && $3~/G/ && $3!~/I/ {for(i=4;i<=NF;i++) if($i~/^en[0-9]+$/) {print $2, $i; exit}}')
+      routes=$(__ak.inet.check.run netstat -rn -f inet 2>/dev/null | awk '$1=="default" && $3~/G/ {for(i=4;i<=NF;i++) if($i~/^en[0-9]+$/) {if($3!~/I/) {print $2, $i; done=1; exit} if(scoped=="") scoped=$2" "$i}} END {if(!done && scoped!="") print scoped}')
     else
       routes=$(printf '%s\n' "$routes" | awk '{g="";d="";for(i=1;i<NF;i++){if($i=="via")g=$(i+1);if($i=="dev")d=$(i+1)} if(d!~/^(tun|utun|wg|tailscale)/ && d!=""){print g,d;exit}}')
     fi
@@ -446,7 +446,7 @@ function __ak.inet.check.tailscale() {
   [[ -n "$binary" ]] || return 0
   __ak.inet.check.save tailscale Info 'unavailable (daemon stopped or timeout)'
   if output=$(__ak.inet.check.run "$binary" status --json 2>/dev/null) &&
-     name=$(printf '%s' "$output" | jq -er 'if .ExitNodeStatus == null then "none" else (.ExitNodeStatus as $exit | ([.Peer[]? | select(.ID == $exit.ID)][0]) as $peer | $peer.HostName // $peer.DNSName // $exit.HostName // $exit.DNSName // $exit.TailscaleIPs[0] // "unknown") end' 2>/dev/null); then
+     name=$(printf '%s' "$output" | jq -er 'if .ExitNodeStatus == null then "none" else (.ExitNodeStatus as $exit | ([.Peer[]? | select(.ID == $exit.ID)][0]) as $peer | (([$peer.DNSName, $exit.DNSName] | map(select(. != null and . != "")) | .[0] // "" | split(".")[0]) as $given | if $given != "" then $given else ($peer.HostName // $exit.HostName // $exit.TailscaleIPs[0] // "unknown") end)) end' 2>/dev/null); then
     __ak.inet.check.save tailscale Info "exit node: $name"
   fi
 }

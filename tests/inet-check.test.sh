@@ -21,7 +21,10 @@ case "$name" in
     iface=en0
     [[ $SCENARIO == vpn* ]] && iface=utun7
     printf 'gateway: 192.0.2.1\ninterface: %s\n' "$iface";;
-  netstat) printf 'default 192.0.2.99 UGScI en9\ndefault 192.0.2.1 UGSc en0\n';;
+  netstat)
+    # With a Tailscale exit node macOS keeps the physical default only as a scoped (I) route.
+    if [[ $SCENARIO == vpn_scoped ]]; then printf 'default link#22 UCSg utun7\ndefault 192.0.2.1 UGScIg en0\n'
+    else printf 'default 192.0.2.99 UGScI en9\ndefault 192.0.2.1 UGSc en0\n'; fi;;
   ifconfig)
     [[ $SCENARIO == no_link ]] && exit 0
     [[ $SCENARIO == apipa ]] && { echo 'inet 169.254.1.2'; exit; }
@@ -62,7 +65,7 @@ case "$name" in
   scutil) echo 'HTTPEnable : 0';;
   tailscale)
     if [[ $SCENARIO == exit_node ]]; then
-      echo '{"ExitNodeStatus":{"ID":"node-id"},"Peer":{"nodekey:example":{"ID":"node-id","HostName":"vpn-example"}}}'
+      echo '{"ExitNodeStatus":{"ID":"node-id"},"Peer":{"nodekey:example":{"ID":"node-id","HostName":"vpn-example-new","DNSName":"vpn-example.infra.internal."}}}'
     else echo '{"ExitNodeStatus":null}'; fi;;
   *) exit 99;;
 esac
@@ -102,6 +105,7 @@ cases = {
  'down_nohop': (1, 'Router up, internet down (ISP or beyond)'),
  'no_link': (1, 'No network link'),
  'vpn': (0, 'Internet OK'),
+ 'vpn_scoped': (0, 'Internet OK'),
  'vpn_down': (1, 'traffic goes through VPN tunnel'),
 }
 def run(shell, scenario, **extra):
@@ -127,10 +131,10 @@ for shell in ([os.environ['TEST_BASH']], [os.environ['TEST_ZSH'],'-f']):
             assert all(state in ('OK','Info') for state in rows.values()), rows
             assert not calls.exists(), 'unnecessary DoH request'
         if scenario == 'exit_node':
-            assert 'exit node: vpn-example' in result.stdout
+            assert 'exit node: vpn-example\n' in result.stdout  # MagicDNS given name, not the OS hostname
         if scenario.startswith('vpn'):
             assert 'ISP hop' not in rows and 'VPN tunnel' in result.stdout
-            assert '192.0.2.1' in result.stdout
+            assert '192.0.2.1' in result.stdout and rows['Link'] == 'OK' and rows['Router'] == 'OK'
     result,rows=run(shell,'ok',TEST_OS='Linux')
     assert 'Proxy' not in rows and 'eth0' in result.stdout
     start=time.monotonic()
