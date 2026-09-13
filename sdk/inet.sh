@@ -276,6 +276,11 @@ function __ak.inet.check.topology() {
     primary=$(printf '%s\n' "$routes" | awk '/interface:/{print $2; exit}')
     gateway=$(printf '%s\n' "$routes" | awk '/gateway:/{print $2; exit}')
   else
+    if ! command -v ip >/dev/null; then
+      __ak.inet.check.save link Skip 'ip not installed'
+      __ak.inet.check.save router Skip 'ip not installed'
+      return
+    fi
     routes=$(__ak.inet.check.run ip -4 route show default 2>/dev/null)
     primary=$(printf '%s\n' "$routes" | awk '{for(i=1;i<NF;i++) if($i=="dev") {print $(i+1); exit}}')
     gateway=$(printf '%s\n' "$routes" | awk '{for(i=1;i<NF;i++) if($i=="via") {print $(i+1); exit}}')
@@ -317,7 +322,9 @@ function __ak.inet.check.link() {
 }
 
 function __ak.inet.check.ping() {
-  local key=$1 target=$2 output rtt
+  local key=$1 target=$2 output rtt shown=$2
+  # Public ping rows already carry the target in their label.
+  case "$key" in ping1|ping2) shown='';; esac
   if [[ -z "$target" ]]; then
     __ak.inet.check.save "$key" Fail 'no gateway'
     return
@@ -327,8 +334,10 @@ function __ak.inet.check.ping() {
     return
   fi
   if output=$(__ak.inet.check.run ping -n -c 1 "$target" 2>/dev/null); then
-    rtt=$(printf '%s\n' "$output" | sed -nE 's/.*time([=<][[:space:]]*[0-9.]+).*/\1 ms/p' | head -1 | sed 's/^=//')
-    __ak.inet.check.save "$key" OK "$target ${rtt:-RTT unavailable}"
+    rtt=$(printf '%s\n' "$output" | awk 'match($0, /time[=<] *[0-9.]+/) {
+      v=substr($0, RSTART+5, RLENGTH-5); sub(/^ +/, "", v)
+      printf "%s%d ms", (substr($0, RSTART+4, 1) == "<" ? "<" : ""), v + 0.5; exit }')
+    __ak.inet.check.save "$key" OK "$(printf '%-15s %s' "$shown" "${rtt:-RTT unavailable}")"
   else
     __ak.inet.check.save "$key" Fail "$target no reply"
   fi
@@ -451,7 +460,11 @@ function __ak.inet.check.print() {
     if [[ -t 1 ]]; then
       case "$result" in OK) color=${AK_COLOR_Green:-};; Fail) color=${AK_COLOR_Red:-};; esac
     fi
-    printf '%s%-6s %-18s %s%s\n' "$color" "[$result]" "$label" "$detail" "${color:+${AK_COLOR_NC:-}}"
+    if [[ -z "$detail" ]]; then
+      printf '%s%-6s %s%s\n' "$color" "[$result]" "$label" "${color:+${AK_COLOR_NC:-}}"
+    else
+      printf '%s%-6s %-18s %s%s\n' "$color" "[$result]" "$label" "$detail" "${color:+${AK_COLOR_NC:-}}"
+    fi
   done <<'ROWS'
 link|Link
 router|Router

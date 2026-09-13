@@ -1,7 +1,7 @@
 ---
 id: 00e
 type: task
-status: planned
+status: live-check
 created: 2026-09-14
 ---
 
@@ -166,3 +166,17 @@ shellcheck -s bash sdk/inet.sh tests/inet-check.test.sh   # без новых п
 На этом Mac в Herdr `prefix+m → i`: обычная сеть; выключенный Wi-Fi; сломанный
 DNS (`networksetup -setdnsservers Wi-Fi 192.0.2.1`, потом `empty`); включённый
 exit node. Сверить вердикты и что этап 1 занимает ≈2–3 с.
+
+## Результат (2026-09-14)
+
+- `435cbb0` — реализация (Codex), `sdk/inet.sh` + `tests/inet-check.test.sh`; ревью и
+  интеграция в основной сессии. Отличие от плана: пробы запускаются через `perl`
+  (`setpgrp`) в отдельных process groups, чтобы дедлайн гарантированно убивал их вместе
+  с детьми; без `perl` — `[Skip] Diagnostics`. Лимит: 2 с основной этап + 1 с DoH.
+- Доводка: RTT округляется до целых мс, IP не дублируется в строках `Ping`, нет
+  хвостовых пробелов, на Linux без `ip` — `[Skip]` для Link/Router.
+- Гейты: тесты bash + `zsh -f` зелёные (этап 1 ≈2,2 с при пробах по 1 с); `shellcheck`
+  — только прежний SC2028 в `ak.inet.serve`.
+- Живая проверка оператора: обычная сеть в Herdr — OK (`=> Internet OK`).
+  **Осталось:** выключенный Wi-Fi, сломанный DNS, включённый exit node. После —
+  `status: done`.

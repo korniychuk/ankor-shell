@@ -109,7 +109,7 @@ def run(shell, scenario, **extra):
                             text=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=6)
     assert not result.stderr, result.stderr
     assert not list((root/'tmp').iterdir()), 'temporary directory leaked'
-    rows = re.findall(r'^\[(OK|Fail|Skip|Info)\]\s+(.*?)\s{2,}',result.stdout,re.M)
+    rows = re.findall(r'^\[(OK|Fail|Skip|Info)\]\s+(.*?)(?:\s{2,}|$)',result.stdout,re.M)
     positions = [labels.index(label) for _,label in rows]
     assert positions == sorted(set(positions)), result.stdout
     assert len(rows) >= 11, result.stdout
