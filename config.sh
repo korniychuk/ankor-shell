@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # variables
-export PATH="$PATH:$HOME/.local/bin"
+# Guarded: ankor-dotfiles zsh/.path-patcher.sh adds the same entry in login shells.
+case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$PATH:$HOME/.local/bin" ;; esac
 
 # cd aliases
 alias cdh="cd ~"
