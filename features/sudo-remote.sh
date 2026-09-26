@@ -321,7 +321,7 @@ declare -r __AK_SUDO_REMOTE_REVOKE_CMD="bash -lic 'command -v ak.sudo.revoke > /
 # @param $1 rc      ssh exit code
 # @param $2 before  porcelain line before the revoke ('' when missing)
 # @param $3 after   porcelain line after the revoke ('' when missing)
-# @output revoked | none | still | unreachable | no_ak | timeout | failed
+# @output revoked | none | still | unreachable | no_ak | outdated | timeout | failed
 ##
 function __ak.sudo.remote.revokeState() {
   local -r rc="${1:-}"
@@ -335,6 +335,13 @@ function __ak.sudo.remote.revokeState() {
   esac
   if [[ "${after}" == granted=1* ]]; then
     printf 'still\n'
+    return 0
+  fi
+  # No porcelain line at all: an ankor-shell from before `status --porcelain`
+  # (nothing to trust about what its revoke did — the host is reported, not
+  # counted as a failure, like a host without ankor-shell).
+  if [[ -z "${before}" && -z "${after}" ]]; then
+    printf 'outdated\n'
     return 0
   fi
   if [[ "${rc}" != '0' || "${after}" != granted=0* ]]; then
@@ -407,6 +414,7 @@ function __ak.sudo.remote.revokeHosts() {
         unreachable) nUnreachable+=1; mark='✘'; color="${cYellow}"; label="unreachable (ssh rc=${rc})" ;;
         timeout)     nFailed+=1; mark='✘'; color="${cRed}"; label="timed out — state UNKNOWN, check: ak.sudo.remote-status ${host}" ;;
         no_ak)       nUnreachable+=1; mark='✘'; color="${cGray}"; label='ankor-shell not installed' ;;
+        outdated)    nUnreachable+=1; mark='✘'; color="${cGray}"; label='ankor-shell outdated (no porcelain) — run the fleet update; check: ak.sudo.remote-status '"${host}" ;;
         still)       nFailed+=1; mark='✘'; color="${cRed}"; label='STILL GRANTED — revoke failed, check the host' ;;
         *)           nFailed+=1; mark='✘'; color="${cRed}"; label="failed (rc=${rc:-?})" ;;
       esac
