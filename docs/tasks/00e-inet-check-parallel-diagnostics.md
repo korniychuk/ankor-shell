@@ -189,11 +189,11 @@ exit node. Сверить вердикты и что этап 1 занимает
        fallback по `netstat -rn` отбрасывал scoped-маршруты. Теперь берётся unscoped `en*`,
        иначе scoped. Фикстура теста была нереалистичной (unscoped `en0` рядом с `utun`) —
        добавлен сценарий `vpn_scoped`.
-    2. Имя exit node `sg-ankor-main-new`: код брал `Peer.HostName` = hostname **ОС** узла
-       (задаётся на самой машине), а переименование в Headscale меняет только given name =
-       `DNSName` (`sg-ankor-main.infra.internal.`). Теперь печатается первая метка `DNSName`,
-       `HostName` — лишь fallback. Сам hostname ОС `sg-ankor-main-new` на сервере остался
-       (так же `ankor-gw`, `exit-sg-vultr`, `ankor-sg-main` у других узлов) — это вне задачи.
+    2. Имя exit node: код брал `Peer.HostName` = hostname **ОС** узла (задаётся на самой
+       машине, например `vps-alpha-new`), а переименование в Headscale меняет только given
+       name = `DNSName` (`vps-alpha.example.internal.`). Теперь печатается первая метка
+       `DNSName`, `HostName` — лишь fallback. Сами hostname ОС на серверах остались
+       старыми — это вне задачи.
 - **Done 2026-09-14** — проверено оператором вручную (обычная сеть, Wi-Fi off, сломанный DNS,
   exit node on). Повторный прогон exit node on **после** фикса `33cc2eb` не делался — фикс
   покрыт офлайн-сценарием `vpn_scoped`; при расхождении вживую — переоткрыть.

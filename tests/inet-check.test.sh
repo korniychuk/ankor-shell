@@ -65,7 +65,7 @@ case "$name" in
   scutil) echo 'HTTPEnable : 0';;
   tailscale)
     if [[ $SCENARIO == exit_node ]]; then
-      echo '{"ExitNodeStatus":{"ID":"node-id"},"Peer":{"nodekey:example":{"ID":"node-id","HostName":"vpn-example-new","DNSName":"vpn-example.infra.internal."}}}'
+      echo '{"ExitNodeStatus":{"ID":"node-id"},"Peer":{"nodekey:example":{"ID":"node-id","HostName":"vpn-example-new","DNSName":"vpn-example.example.internal."}}}'
     else echo '{"ExitNodeStatus":null}'; fi;;
   *) exit 99;;
 esac
