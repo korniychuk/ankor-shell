@@ -111,6 +111,47 @@ function ak.sudo.remote-status() {
   __ak.sudo.remote.exec 'ak.sudo.status' "${host}"
 }
 
+declare -r AK_SUDO_REMOTE_POLL_TIMEOUT_DEFAULT=15    # per-host overall poll deadline, seconds
+declare -r AK_SUDO_REMOTE_POLL_CONNECT_TIMEOUT=5     # ssh ConnectTimeout of a poll, seconds
+
+# Run <remoteCmd> on every <host> in PARALLEL, without a tty or any prompt, and
+# wait for all of them. Per host (1-based position i in the argument list):
+#   <outDir>/<i>.out  remote stdout    <outDir>/<i>.err  ssh + remote stderr
+#   <outDir>/<i>.rc   exit code (124 = timed out, 255 = ssh failed)
+# The caller owns <outDir> and its cleanup (a subshell with EXIT/INT/TERM
+# traps — the INT/TERM ones must `kill $(jobs -p)` before the EXIT rm).
+#
+# BatchMode fails fast instead of hanging the parallel poll on a passphrase
+# prompt. ak.sh.timeout on top: ConnectTimeout covers ONLY the connect phase, a
+# hung `bash -lic` after a successful connect needs its own deadline.
+# @param $1 outDir          existing directory for the result files
+# @param $2 timeoutSec      per-host overall deadline
+# @param $3 acceptNewKeys   1 = StrictHostKeyChecking=accept-new (TOFU), 0 = strict
+# @param $4 remoteCmd       ONE pre-composed, pre-validated command string
+# @param $5.. hosts
+function __ak.sudo.remote.pollAll() {
+  local -r outDir="$1"
+  local -r timeoutSec="$2"
+  local -r acceptNewKeys="$3"
+  local -r remoteCmd="$4"
+  shift 4
+
+  local -a sshOpts=(-T -n -o BatchMode=yes -o "ConnectTimeout=${AK_SUDO_REMOTE_POLL_CONNECT_TIMEOUT}")
+  (( acceptNewKeys )) && sshOpts+=(-o StrictHostKeyChecking=accept-new)
+
+  local -i i=0
+  local host=''
+  for host in "$@"; do
+    i+=1
+    (
+      ak.sh.timeout "${timeoutSec}" ssh "${sshOpts[@]}" -- "${host}" "${remoteCmd}" \
+        > "${outDir}/${i}.out" 2> "${outDir}/${i}.err"
+      echo $? > "${outDir}/${i}.rc"
+    ) 2> /dev/null &   # the job's own notices (e.g. "Killed") — ssh stderr is captured above
+  done
+  wait
+}
+
 ##
 # Poll ALL connectable hosts from ~/.ssh/config in PARALLEL and print each
 # host's grant state: green granted / red no grant / gray no (or outdated)
@@ -159,25 +200,16 @@ function ak.sudo.remote-status-all() {
     trap 'kill $(jobs -p) 2> /dev/null; exit 130' INT
     trap 'kill $(jobs -p) 2> /dev/null; exit 143' TERM
 
-    # No tty, no prompts: BatchMode fails fast instead of hanging the parallel
-    # poll on a passphrase prompt (the remote side only ever calls `sudo -n`).
     # `command -v` probe: an explicit 127 beats guessing by stderr noise
     # (`bash -i` without a tty prints "no job control in this shell").
-    # ak.sh.timeout on top: ConnectTimeout covers ONLY the connect phase, a
-    # hung `bash -lic` after a successful connect needs its own deadline.
     local -r remoteCmd="bash -lic 'command -v ak.sudo.status > /dev/null || exit 127; ak.sudo.status --porcelain'"
+    # accept-new (TOFU) stays as before: this poll sends nothing secret. Mind
+    # that a key accepted here is trusted by a later lend-many as well.
+    __ak.sudo.remote.pollAll "${tmpDir}" "${AK_SUDO_REMOTE_ALL_TIMEOUT:-${AK_SUDO_REMOTE_POLL_TIMEOUT_DEFAULT}}" \
+      1 "${remoteCmd}" "${hosts[@]}"
+
     local -i i=0
     local host=''
-    for host in "${hosts[@]}"; do
-      i+=1
-      (
-        ak.sh.timeout "${AK_SUDO_REMOTE_ALL_TIMEOUT:-15}" \
-          ssh -T -n -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new \
-            -- "${host}" "${remoteCmd}" > "${tmpDir}/${i}.out" 2> /dev/null
-        echo $? > "${tmpDir}/${i}.rc"
-      ) &
-    done
-    wait
 
     # hosts come from ak.ssh.hosts already sorted → stable alphabetical output
     # regardless of response order.

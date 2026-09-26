@@ -75,6 +75,7 @@ fi
 # Features (loaded after SDK)
 source "${AK_SCRIPT_PATH}/features/sudo.sh"
 source "${AK_SCRIPT_PATH}/features/sudo-remote.sh"
+source "${AK_SCRIPT_PATH}/features/sudo-remote-many.sh"
 
 # Shell completions (loaded after features; must never break the library)
 source "${AK_SCRIPT_PATH}/completions/load.sh"
