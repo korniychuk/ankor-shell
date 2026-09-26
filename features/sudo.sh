@@ -422,7 +422,9 @@ function __ak.sudo.timer.remaining() {
 # @output the exit code
 function __ak.sudo.classifyAuthError() {
   local -r err="${1:-}"
-  local -r badPasswordRe='incorrect password|Sorry, try again'
+  # Three wordings seen on the fleet: sudo's own, the classic PAM one, and the
+  # PAM one of newer distributions (`Authentication failed, try again.`).
+  local -r badPasswordRe='incorrect password|Sorry, try again|Authentication failed'
   local -r needsTtyRe='a terminal is required|must have a tty|requiretty'
 
   if [[ "${err}" =~ ${badPasswordRe} ]]; then
@@ -492,6 +494,9 @@ function __ak.sudo.authenticateFromFd() {
   if [[ -n "${errFile}" ]]; then
     err="$(cat "${errFile}" 2> /dev/null)"
     rm -f "${errFile}"
+    # `-p ''` still ends the (empty) prompt with a newline — drop leading blanks
+    # so the message does not start with an empty line in a summary.
+    err="${err#"${err%%[![:space:]]*}"}"
   fi
 
   if (( authRc == 0 )); then

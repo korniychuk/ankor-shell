@@ -240,7 +240,7 @@ function __ak.sudo.many.formatDeadline() {
 ##
 # Echo the one-phrase reason of a failed host. Pure.
 # @param $1 class  @param $2 host  @param $3 rc  @param $4 stderr
-# @param $5 note   skipped: the canary host · grant_vanished: why not retried
+# @param $5 note   skipped: why (see lendRound) · grant_vanished: why not retried
 ##
 function __ak.sudo.many.reason() {
   local -r class="$1"
@@ -252,7 +252,7 @@ function __ak.sudo.many.reason() {
 
   case "${class}" in
     bad_password) printf 'password rejected' ;;
-    skipped) printf 'skipped — password rejected on %s' "${note}" ;;
+    skipped) printf 'skipped — %s' "${note}" ;;
     grant_vanished) printf 'grant vanished since the probe, %s' "${note:-sudo password needed}" ;;
     needs_tty) printf 'sudo needs a terminal here (requiretty / PAM) — use: ak.sudo.remote-lend %s' "${host}" ;;
     no_cache) printf 'password accepted, but the sudo credential cache is not reusable (timestamp_timeout=0 / timestamp_type?)' ;;
@@ -454,8 +454,8 @@ function __ak.sudo.many.await() {
 
 ##
 # One lend round: prove the password on ONE canary host (sequentially, first
-# host that needs it; the next one takes over if a canary fails for another
-# reason), then send it to ALL remaining hosts in one parallel wave — hosts
+# host that needs it; the next one takes over only if the canary never got to
+# check it), then send it to ALL remaining hosts in one parallel wave — hosts
 # that did not need it included (a grant seen by the probe may have vanished,
 # docs/tasks/00f §2a). A rejected password is never sent anywhere else:
 # faillock counts every attempt, on every host.
@@ -480,23 +480,31 @@ function __ak.sudo.many.lendRound() {
     fi
   done
 
-  local canary='' rejectedOn=''
+  # skipReason, once set, stops the password: the remaining hosts that need it
+  # are marked `skipped` with that reason. Only a canary that never got to
+  # check the password (unreachable, no ankor-shell, requiretty…) hands the
+  # role to the next host — any other failure after the password was sent is
+  # NOT proof and must not cost faillock attempts across the fleet.
+  local canary='' skipReason=''
   for host in "${needList[@]}"; do
     if [[ -n "${canary}" ]]; then
       restNeed+=("${host}")
-    elif [[ -n "${rejectedOn}" ]]; then
+    elif [[ -n "${skipReason}" ]]; then
       hostResult[${host}]='skipped'
-      hostNote[${host}]="${rejectedOn}"
+      hostNote[${host}]="${skipReason}"
     else
       __ak.sudo.many.launch "${phase}" "${host}" "${pw}"
       __ak.sudo.many.await "${phase}" "${host}" "${host}"
       case "${hostResult[${host}]}" in
-        ok | relent | shortened) canary="${host}" ;;
-        bad_password) rejectedOn="${host}" ;;
+        ok | relent | shortened | no_cache) canary="${host}" ;;   # password accepted
+        bad_password) skipReason="password rejected on ${host}" ;;
+        unreachable | timeout | no_ak | outdated | needs_tty) ;;  # not checked — next canary
+        *) skipReason="password not proven on ${host} (${hostResult[${host}]}, rc=${hostRc[${host}]:-?})" ;;
       esac
     fi
   done
-  # Only a password proven on the canary travels further.
+  # Only a password proven on the canary travels further. A no_cache canary
+  # proved it but cannot lend itself — it stays ✘, the wave still gets the password.
   [[ -z "${canary}" ]] && pw=''
 
   local -a wave=("${restNeed[@]}" "${freeList[@]}")
