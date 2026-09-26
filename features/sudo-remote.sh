@@ -117,6 +117,10 @@ function ak.sudo.remote-status() {
 # ankor-shell / yellow unreachable. Live state, no cache. A report, not a
 # check — returns 0 even when some hosts are down; a summary line closes it.
 #
+# Porcelain parsing is tolerant by design: only `granted=` and
+# `deadline_epoch=<digits>` are read, any other field (e.g. `lend_api=1`) is
+# ignored, so a host may run a NEWER ankor-shell than this machine.
+#
 # @env AK_SUDO_REMOTE_ALL_TIMEOUT per-host overall timeout in seconds (default 15)
 #
 # @example

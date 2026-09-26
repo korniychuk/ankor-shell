@@ -39,6 +39,25 @@
 
 declare -r AK_SUDO_FILE="/etc/sudoers.d/99-ak-temp-sudo"
 
+# Lend window when no minutes are given. ak.sudo.remote-lend-many sends it to
+# every host EXPLICITLY, so one run opens equal windows even on a host whose
+# ankor-shell carries a different default.
+declare -r AK_SUDO_DEFAULT_MINUTES=30
+
+# Exit codes of `ak.sudo.lend --password-fd`. Deliberately outside the codes that
+# already mean something on this path (1 generic, 124 timeout, 126/127 exec,
+# 130 SIGINT, 255 ssh): the calling side classifies by CODE and shows stderr
+# only as an explanation.
+declare -r AK_SUDO_RC_BAD_PASSWORD=20     # sudo rejected the password
+declare -r AK_SUDO_RC_NEEDS_TTY=21        # requiretty / PAM wants a terminal
+declare -r AK_SUDO_RC_NO_CACHE=22         # password accepted, but no reusable credential cache
+declare -r AK_SUDO_RC_NO_PASSWORD=23      # no password given and sudo is not passwordless
+declare -r AK_SUDO_PASSWORD_FD_MIN=3      # 0..2 are stdio — never a password channel
+declare -r AK_SUDO_PASSWORD_FD_MAX=9
+# Internal (never leaves the host): authentication succeeded only because a live
+# grant / rule keeps sudo passwordless — see __ak.sudo.authenticateFromFd.
+declare -r __AK_SUDO_AUTH_VIA_GRANT=2
+
 # Linux: the persistent systemd units + the helper they run. Every path here is
 # created by ak.sudo.lend and removed again by the auto-revoke itself (or by
 # ak.sudo.revoke) — nothing outlives the grant it belongs to.
@@ -392,8 +411,151 @@ function __ak.sudo.timer.remaining() {
   return 0
 }
 
+# Map sudo's stderr after a failed `sudo -S -v` (rendered under LC_ALL=C, so
+# the wording is stable) to an AK_SUDO_RC_* code; 1 when nothing matches.
+# Pure — no side effects.
+# @param $1 sudo's stderr
+# @output the exit code
+function __ak.sudo.classifyAuthError() {
+  local -r err="${1:-}"
+  local -r badPasswordRe='incorrect password|Sorry, try again'
+  local -r needsTtyRe='a terminal is required|must have a tty|requiretty'
+
+  if [[ "${err}" =~ ${badPasswordRe} ]]; then
+    printf '%s\n' "${AK_SUDO_RC_BAD_PASSWORD}"
+    return 0
+  fi
+  if [[ "${err}" =~ ${needsTtyRe} ]]; then
+    printf '%s\n' "${AK_SUDO_RC_NEEDS_TTY}"
+    return 0
+  fi
+  printf '1\n'
+}
+
+# Authenticate sudo with the password waiting on <fd> — without a tty.
+# Returns 0 — sudo now runs on OUR fresh credential cache;
+#         __AK_SUDO_AUTH_VIA_GRANT — sudo is passwordless, but only thanks to
+#           a live grant/rule (no password given, or it was rejected here);
+#         an AK_SUDO_RC_* code / 1 — sudo is not usable.
+# Prints `lend_auth=rejected` to stdout when the password was rejected but a
+# live grant kept sudo passwordless, so the calling side can say so.
+#
+# sudo runs as a DIRECT child of the calling shell, on purpose: without a tty
+# its credential cache is keyed to the PARENT pid, and the `sudo tee` that
+# writes the drop-in (also a direct child) must find that cache. Inside `$( … )`
+# sudo's parent would be a throwaway subshell — hence this function must never
+# be called from a command substitution, and sudo's stderr goes to a temp file
+# (the password never does: it travels through a pipe only).
+# @param $1 fd  the descriptor to read ONE line (the password) from
+function __ak.sudo.authenticateFromFd() {
+  # xtrace would print the password — off for this function only.
+  if [[ -n "${ZSH_VERSION:-}" ]]; then
+    setopt localoptions noxtrace
+  else
+    local -
+    set +x
+  fi
+
+  local -r fd="$1"
+  if ! { true <&"${fd}"; } 2> /dev/null; then
+    ak.sh.err "ak.sudo.lend: --password-fd ${fd} is not open."
+    return 1
+  fi
+
+  # An empty pipe yields an empty line (read returns 1 at EOF) — that is the
+  # "no password" case, not an error.
+  local pw=''
+  IFS= read -r -u "${fd}" pw
+
+  if [[ -z "${pw}" ]]; then
+    unset pw
+    __ak.sudo.passwordless && return "${__AK_SUDO_AUTH_VIA_GRANT}"
+    ak.sh.err "ak.sudo.lend: no password on fd ${fd}, and sudo is not passwordless here."
+    return "${AK_SUDO_RC_NO_PASSWORD}"
+  fi
+
+  local errFile=''
+  errFile="$(mktemp "${TMPDIR:-/tmp}/ak-sudo-auth.XXXXXX" 2> /dev/null)"
+  [[ -z "${errFile}" ]] && ak.sh.warn "ak.sudo.lend: mktemp failed — sudo's own error message will not be shown."
+
+  # Even when the host is passwordless right now: a grant may vanish mid-lend,
+  # a fresh cache cannot. `printf` is a builtin — the password never reaches argv.
+  printf '%s\n' "${pw}" | LC_ALL=C sudo -S -p '' -v > /dev/null 2> "${errFile:-/dev/null}"
+  local -r authRc=$?
+  unset pw
+
+  local err=''
+  if [[ -n "${errFile}" ]]; then
+    err="$(cat "${errFile}" 2> /dev/null)"
+    rm -f "${errFile}"
+  fi
+
+  if (( authRc == 0 )); then
+    __ak.sudo.passwordless && return 0
+    ak.sh.err "ak.sudo.lend: password accepted, but the sudo credential cache is not reusable here — timestamp_timeout=0 / timestamp_type in sudoers?"
+    return "${AK_SUDO_RC_NO_CACHE}"
+  fi
+
+  if __ak.sudo.passwordless; then
+    ak.sh.warn "ak.sudo.lend: sudo rejected the password here, but a live grant keeps sudo passwordless — re-lending on it."
+    printf 'lend_auth=rejected\n'
+    return "${__AK_SUDO_AUTH_VIA_GRANT}"
+  fi
+
+  [[ -n "${err}" ]] && ak.sh.err "sudo: ${err}"
+  return "$(__ak.sudo.classifyAuthError "${err}")"
+}
+
+# `ak.sudo.lend --password-fd <n> [minutes]` — the non-interactive lend behind
+# ak.sudo.remote-lend-many: the password arrives as ONE line on fd <n> (empty
+# line / EOF = none given), sudo reads it via `-S` with no tty involved, then
+# the regular lend runs on the fresh credential cache.
+# Returns 0, the lend's own code, or an AK_SUDO_RC_* code.
+# @param $1 fd      3..9
+# @param $2 minutes optional, default AK_SUDO_DEFAULT_MINUTES
+function __ak.sudo.lendWithPasswordFd() {
+  local -r fd="${1:-}"
+  local -r mins="${2:-${AK_SUDO_DEFAULT_MINUTES}}"
+  local -r usage="Usage: ak.sudo.lend --password-fd <${AK_SUDO_PASSWORD_FD_MIN}..${AK_SUDO_PASSWORD_FD_MAX}> [minutes 1..1440]"
+
+  if (( $# < 1 || $# > 2 )) || [[ ! "${fd}" =~ ^[0-9]$ ]] \
+    || (( fd < AK_SUDO_PASSWORD_FD_MIN || fd > AK_SUDO_PASSWORD_FD_MAX )); then
+    ak.sh.err "${usage}"
+    return 1
+  fi
+  if ! __ak.sudo.validMinutes "${mins}"; then
+    ak.sh.err "${usage}"
+    return 1
+  fi
+
+  # NOT in `$( … )` — see __ak.sudo.authenticateFromFd for why.
+  __ak.sudo.authenticateFromFd "${fd}"
+  local -r authRc=$?
+  local onOwnCache=1
+  if (( authRc == __AK_SUDO_AUTH_VIA_GRANT )); then
+    onOwnCache=0
+  elif (( authRc != 0 )); then
+    return "${authRc}"
+  fi
+
+  ak.sudo.lend "${mins}"
+  local -r lendRc=$?
+  (( lendRc == 0 )) && return 0
+
+  # A lend that ran on a live grant fails when that grant vanishes mid-lend
+  # (expired / revoked elsewhere) — say so with a distinct code, the caller
+  # retries with a password. On our own cache the failure is real: fail-closed
+  # reverts end with `sudo -k`, which must not read as a vanished grant.
+  if (( ! onOwnCache )) && ! __ak.sudo.passwordless; then
+    ak.sh.err "ak.sudo.lend: the grant vanished during the lend — a sudo password is needed."
+    return "${AK_SUDO_RC_NO_PASSWORD}"
+  fi
+  return "${lendRc}"
+}
+
 ##
-# Grant passwordless sudo to the current user for N minutes (default 30, range 1..1440).
+# Grant passwordless sudo to the current user for N minutes (default
+# AK_SUDO_DEFAULT_MINUTES = 30, range 1..1440).
 # Prompts for your password ONCE (the first sudo). Auto-revokes via a reboot-safe
 # job (systemd units on Linux, a LaunchDaemon on macOS); re-running MOVES the
 # window (the message says so explicitly).
@@ -401,12 +563,27 @@ function __ak.sudo.timer.remaining() {
 # Fails CLOSED: if the auto-revoke cannot be armed, the grant is reverted rather
 # than left unenforced — including a still-valid grant this call was re-lending.
 # An unenforced grant is precisely the failure this module exists to prevent.
-# @param $1 minutes (optional, default 30)
+#
+# `--password-fd <n>` (n = 3..9): non-interactive mode for
+# ak.sudo.remote-lend-many — the password comes as one line on fd <n>, never
+# from a tty. Exit codes AK_SUDO_RC_* (see the top of this file) tell the caller
+# why it failed.
+# @param $1 minutes (optional, default AK_SUDO_DEFAULT_MINUTES)
+#
+# @example
+#   ak.sudo.lend 20
+#   printf '%s\n' "${pw}" | ak.sudo.lend --password-fd 3 20 3<&0
 ##
 function ak.sudo.lend() {
   __ak.sudo.preflight || return 1
 
-  # Catch the collapsed-quoting remote invocation BEFORE defaulting to 30m:
+  if [[ "${1:-}" == '--password-fd' ]]; then
+    shift
+    __ak.sudo.lendWithPasswordFd "$@"
+    return
+  fi
+
+  # Catch the collapsed-quoting remote invocation BEFORE applying the default:
   #   ssh -t HOST bash -lic 'ak.sudo.lend 15'  →  remote: bash -lic ak.sudo.lend 15
   # ssh re-joins its argv into one string, the inner quotes are gone, and `bash -c`
   # binds that trailing `15` to $0 — never to $1. Without this guard the caller
@@ -419,13 +596,13 @@ function ak.sudo.lend() {
     return 1
   fi
   if (( $# > 1 )); then
-    ak.sh.err "Usage: ak.sudo.lend [minutes 1..1440]  (default 30) — got $# arguments"
+    ak.sh.err "Usage: ak.sudo.lend [minutes 1..1440]  (default ${AK_SUDO_DEFAULT_MINUTES}) — got $# arguments"
     return 1
   fi
 
-  local -r mins="${1:-30}"
+  local -r mins="${1:-${AK_SUDO_DEFAULT_MINUTES}}"
   if ! __ak.sudo.validMinutes "${mins}"; then
-    ak.sh.err "Usage: ak.sudo.lend [minutes 1..1440]  (default 30)"
+    ak.sh.err "Usage: ak.sudo.lend [minutes 1..1440]  (default ${AK_SUDO_DEFAULT_MINUTES})"
     return 1
   fi
 
@@ -557,9 +734,14 @@ function ak.sudo.revoke() {
 ##
 # Report whether the temporary grant is active and how much time remains.
 # @param $1 --porcelain (optional) — ONE stable machine-readable line instead
-#           of prose: `granted=1 deadline_epoch=<epoch>` (epoch omitted when
-#           unknown) or `granted=0`. Consumed by ak.sudo.remote-status-all
-#           over SSH — keep the format stable.
+#           of prose: `granted=1 deadline_epoch=<epoch> lend_api=1` (epoch
+#           omitted when unknown) or `granted=0 lend_api=1`. Consumed by
+#           ak.sudo.remote-status-all and ak.sudo.remote-lend-many over SSH —
+#           keep the format stable. Fields are space-separated `key=value`;
+#           `granted=` always comes first. Only APPEND new fields: parsers
+#           must ignore fields they do not know.
+#           `lend_api=1` — capability marker: this host's ak.sudo.lend
+#           supports `--password-fd` (needed by ak.sudo.remote-lend-many).
 ##
 function ak.sudo.status() {
   __ak.sudo.preflight || return 1
@@ -567,9 +749,9 @@ function ak.sudo.status() {
   if [[ "${1:-}" == '--porcelain' ]]; then
     if __ak.sudo.granted; then
       local -r dl="$(__ak.sudo.timer.deadlineEpoch)"
-      printf 'granted=1%s\n' "${dl:+ deadline_epoch=${dl}}"
+      printf 'granted=1%s lend_api=1\n' "${dl:+ deadline_epoch=${dl}}"
     else
-      printf 'granted=0\n'
+      printf 'granted=0 lend_api=1\n'
     fi
     return 0
   fi
