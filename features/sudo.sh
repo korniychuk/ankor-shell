@@ -415,27 +415,27 @@ function __ak.sudo.timer.remaining() {
   return 0
 }
 
-# Map sudo's stderr after a failed `sudo -S -v` (rendered under LC_ALL=C, so
-# the wording is stable) to an AK_SUDO_RC_* code; 1 when nothing matches.
+# Map sudo's stderr after a failed `sudo -S -v` to an AK_SUDO_RC_* code.
+# sudo exits 1 for EVERY authentication failure, so only the wording tells a
+# rejected password from a policy that wants a terminal — and the wording is
+# only stable in language (LC_ALL=C), not across sudo/PAM versions: the fleet
+# showed `Sorry, try again`, `incorrect password attempt` and
+# `Authentication failed, try again.` for the same wrong password. Hence the
+# terminal case is matched (its phrases are sudo's own and stable) and
+# everything else counts as a rejected password — the safe reading: the caller
+# then stops sending that password anywhere else.
 # Pure — no side effects.
 # @param $1 sudo's stderr
 # @output the exit code
 function __ak.sudo.classifyAuthError() {
   local -r err="${1:-}"
-  # Three wordings seen on the fleet: sudo's own, the classic PAM one, and the
-  # PAM one of newer distributions (`Authentication failed, try again.`).
-  local -r badPasswordRe='incorrect password|Sorry, try again|Authentication failed'
   local -r needsTtyRe='a terminal is required|must have a tty|requiretty'
 
-  if [[ "${err}" =~ ${badPasswordRe} ]]; then
-    printf '%s\n' "${AK_SUDO_RC_BAD_PASSWORD}"
-    return 0
-  fi
   if [[ "${err}" =~ ${needsTtyRe} ]]; then
     printf '%s\n' "${AK_SUDO_RC_NEEDS_TTY}"
     return 0
   fi
-  printf '1\n'
+  printf '%s\n' "${AK_SUDO_RC_BAD_PASSWORD}"
 }
 
 # Authenticate sudo with the password waiting on <fd> — without a tty.
