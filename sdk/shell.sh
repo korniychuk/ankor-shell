@@ -497,6 +497,8 @@ function ak.sh.debounce() {
   "$AK_SCRIPT_PATH/sdk/shell.debounce.sh" "$@" <&0
 }
 
+declare -r __AK_SH_TIMEOUT_KILL_AFTER_SEC=5   # ak.sh.timeout: TERM → KILL grace period
+
 ##
 # Run a command with a time limit.
 # Uses `timeout`/`gtimeout` when available; otherwise falls back to a
@@ -505,8 +507,9 @@ function ak.sh.debounce() {
 # @param {integer} *seconds time limit in whole seconds
 # @param {string}  *command command with its arguments
 #
-# @returns 124 when the limit fired (GNU timeout convention), otherwise the
-#          command's own exit code
+# @returns 124 when the limit fired (GNU timeout convention) — also when the
+#          command ignored SIGTERM and had to be SIGKILLed after
+#          __AK_SH_TIMEOUT_KILL_AFTER_SEC — otherwise the command's own exit code
 #
 # @example
 #
@@ -521,23 +524,33 @@ function ak.sh.timeout() {
   fi
   shift
 
-  if ak.sh.commandExists timeout; then
-    timeout "${seconds}" "$@"
-    return $?
-  fi
-  if ak.sh.commandExists gtimeout; then
-    gtimeout "${seconds}" "$@"
-    return $?
+  # SIGTERM first, SIGKILL after a grace period: a command that ignores TERM
+  # (an interactive bash does) or sits stopped must never outlive its deadline
+  # — a caller polling for completion would wait forever. GNU timeout reports
+  # such a KILL as 137, not 124; normalise it, callers test for 124.
+  local -r startedAt="$(date +%s)"
+  local rc=0
+  local timeoutBin=''
+  ak.sh.commandExists gtimeout && timeoutBin='gtimeout'
+  ak.sh.commandExists timeout && timeoutBin='timeout'
+  if [[ -n "${timeoutBin}" ]]; then
+    "${timeoutBin}" -k "${__AK_SH_TIMEOUT_KILL_AFTER_SEC}" "${seconds}" "$@"
+    rc=$?
+    (( rc == 128 + 9 )) && (( $(date +%s) - startedAt >= seconds )) && rc=124
+    return ${rc}
   fi
 
   # Fallback: run in background, watchdog kills it at the deadline.
-  local -r startedAt="$(date +%s)"
   "$@" &
   local -r cmdPid=$!
-  ( sleep "${seconds}"; kill -TERM "${cmdPid}" 2> /dev/null ) &
+  (
+    sleep "${seconds}"
+    kill -TERM "${cmdPid}" 2> /dev/null || exit 0
+    sleep "${__AK_SH_TIMEOUT_KILL_AFTER_SEC}"
+    kill -KILL "${cmdPid}" 2> /dev/null
+  ) &
   local -r watchdogPid=$!
 
-  local rc=0
   wait "${cmdPid}"
   rc=$?
   kill "${watchdogPid}" 2> /dev/null
