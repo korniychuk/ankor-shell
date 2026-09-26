@@ -17,12 +17,10 @@
 #   associative arrays hostState / hostResult / hostRc / hostErr / hostNote.
 ##
 
-declare -r AK_SUDO_REMOTE_MANY_TIMEOUT_DEFAULT=45      # per-host lend deadline, s (daemon-reload can be slow)
 declare -r __AK_SUDO_MANY_CONNECT_TIMEOUT_DEFAULT=10   # ssh ConnectTimeout, s (as ak.sudo.remote-lend)
 declare -r __AK_SUDO_MANY_POLL_SEC=0.2                 # result polling step — zsh has no `wait -n`
 declare -r __AK_SUDO_MANY_DETAIL_LINES=5               # host output lines shown under a failure
 declare -r __AK_SUDO_MANY_RC_CANCELLED=130             # password prompt cancelled (Ctrl-C / empty)
-declare -r __AK_SUDO_MANY_HOST_RE='^[A-Za-z0-9._@-]+$'
 declare -r __AK_SUDO_MANY_NOISE_RE='no job control|cannot set terminal process group|^[[:space:]]*$'
 # shellcheck disable=SC2016  # expanded when the trap fires, not here
 declare -r __AK_SUDO_MANY_ON_INT='kill $(jobs -p) 2> /dev/null; exit 130'
@@ -33,9 +31,9 @@ declare -r __AK_SUDO_SECONDS_PER_MINUTE=60
 ##
 # Parse `[minutes] <host>...` of ak.sudo.remote-lend-many. Pure (no ssh).
 # Minutes: a leading all-digits argument, 1..1440, default AK_SUDO_DEFAULT_MINUTES.
-# Hosts: split on commas and whitespace, empties dropped, duplicates removed
-# (first occurrence wins). An all-digits host is refused — minutes go FIRST,
-# unlike `ak.sudo.remote-lend <host> <min>`.
+# Hosts: __ak.sudo.remote.parseHosts (commas/whitespace, empties and duplicates
+# dropped). An all-digits host is refused — minutes go FIRST, unlike
+# `ak.sudo.remote-lend <host> <min>`.
 # @output line 1: minutes; then one host per line
 # @returns 0 ok · 1 usage error (message on stderr)
 ##
@@ -51,35 +49,14 @@ function __ak.sudo.many.parseArgs() {
     shift
   fi
 
-  local -a hosts=()
-  local seen=' ' host=''
-  while IFS= read -r host; do
-    [[ -z "${host}" ]] && continue
-    if [[ "${host}" =~ ^[0-9]+$ ]]; then
-      ak.sh.err "ak.sudo.remote-lend-many: '${host}' is not a host — minutes go FIRST: ak.sudo.remote-lend-many 20 h1 h2"
-      return 1
-    fi
-    if [[ "${host}" == -* || ! "${host}" =~ ${__AK_SUDO_MANY_HOST_RE} ]]; then
-      ak.sh.err "ak.sudo.remote-lend-many: invalid host '${host}' — allowed: A-Z a-z 0-9 . _ @ - (not leading '-')."
-      return 1
-    fi
-    [[ "${seen}" == *" ${host} "* ]] && continue
-    seen+="${host} "
-    hosts+=("${host}")
-  done < <(__ak.sudo.many.splitHosts "$@")
-
-  if (( ${#hosts[@]} == 0 )); then
+  local hosts=''
+  hosts="$(__ak.sudo.remote.parseHosts 'ak.sudo.remote-lend-many' \
+    ' — minutes go FIRST: ak.sudo.remote-lend-many 20 h1 h2' "$@")" || return 1
+  if [[ -z "${hosts}" ]]; then
     ak.sh.err "${usage}"
     return 1
   fi
-  printf '%s\n' "${mins}" "${hosts[@]}"
-}
-
-# Echo the host words of the arguments one per line: commas, spaces and tabs
-# all separate (empty words included — the caller drops them).
-function __ak.sudo.many.splitHosts() {
-  # shellcheck disable=SC2020  # a char-for-char map: comma, space, tab → newline
-  printf '%s\n' "$@" | tr ', \t' '\n\n\n'
+  printf '%s\n%s\n' "${mins}" "${hosts}"
 }
 
 # Echo the deadline_epoch of a porcelain line, or nothing when it has none.

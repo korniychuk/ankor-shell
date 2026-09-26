@@ -113,6 +113,43 @@ function ak.sudo.remote-status() {
 
 declare -r AK_SUDO_REMOTE_POLL_TIMEOUT_DEFAULT=15    # per-host overall poll deadline, seconds
 declare -r AK_SUDO_REMOTE_POLL_CONNECT_TIMEOUT=5     # ssh ConnectTimeout of a poll, seconds
+declare -r AK_SUDO_REMOTE_MANY_TIMEOUT_DEFAULT=45    # per-host lend/revoke deadline, s (daemon-reload can be slow)
+declare -r __AK_SUDO_REMOTE_HOST_RE='^[A-Za-z0-9._@-]+$'
+
+##
+# Normalise the host words of a *-many command. Pure. Commas, spaces and tabs
+# all separate; empties are dropped, duplicates removed (first occurrence
+# wins). Refused: an all-digits word (a misplaced minutes argument), a leading
+# '-' (an ssh option) and any character outside [A-Za-z0-9._@-] — hosts go to
+# ssh after `--`, the check is still cheap.
+# @param $1 cmd   command name for the error messages
+# @param $2 hint  appended to the all-digits error (e.g. "minutes go FIRST…")
+# @param $@ words
+# @output one host per line (nothing when there is none)
+# @returns 0 ok · 1 invalid host (message on stderr)
+##
+function __ak.sudo.remote.parseHosts() {
+  local -r cmd="$1"
+  local -r hint="$2"
+  shift 2
+
+  local seen=' ' host=''
+  # shellcheck disable=SC2020  # a char-for-char map: comma, space, tab → newline
+  while IFS= read -r host; do
+    [[ -z "${host}" ]] && continue
+    if [[ "${host}" =~ ^[0-9]+$ ]]; then
+      ak.sh.err "${cmd}: '${host}' is not a host${hint}"
+      return 1
+    fi
+    if [[ "${host}" == -* || ! "${host}" =~ ${__AK_SUDO_REMOTE_HOST_RE} ]]; then
+      ak.sh.err "${cmd}: invalid host '${host}' — allowed: A-Z a-z 0-9 . _ @ - (not leading '-')."
+      return 1
+    fi
+    [[ "${seen}" == *" ${host} "* ]] && continue
+    seen+="${host} "
+    printf '%s\n' "${host}"
+  done < <(printf '%s\n' "$@" | tr ', \t' '\n\n\n')
+}
 
 # Run <remoteCmd> on every <host> in PARALLEL, without a tty or any prompt, and
 # wait for all of them. Per host (1-based position i in the argument list):
@@ -264,4 +301,183 @@ function ak.sudo.remote-status-all() {
       "${nGranted}" "${nNoGrant}" "${nUnreachable}" "${nNoAk}"
   )
   return 0
+}
+
+# ── revoke-many / revoke-all ─────────────────────────────────────────────────
+
+# Remote side of revoke-many: the porcelain line BEFORE the revoke (what there
+# was), the revoke itself, the porcelain line AFTER it (the real state).
+# `ak.sudo.revoke` never prompts: without a live grant it bails before sudo,
+# with one the grant itself makes sudo passwordless.
+# shellcheck disable=SC2016  # $? / $rc expand on the HOST, not here
+declare -r __AK_SUDO_REMOTE_REVOKE_CMD="bash -lic 'command -v ak.sudo.revoke > /dev/null || exit 127; ak.sudo.status --porcelain; ak.sudo.revoke; rc=\$?; ak.sudo.status --porcelain; exit \$rc'"
+
+##
+# Classify one revoke result. Pure.
+# @param $1 rc      ssh exit code
+# @param $2 before  porcelain line before the revoke ('' when missing)
+# @param $3 after   porcelain line after the revoke ('' when missing)
+# @output revoked | none | still | unreachable | no_ak | timeout | failed
+##
+function __ak.sudo.remote.revokeState() {
+  local -r rc="${1:-}"
+  local -r before="${2:-}"
+  local -r after="${3:-}"
+
+  case "${rc}" in
+    124) printf 'timeout\n'; return 0 ;;
+    255) printf 'unreachable\n'; return 0 ;;
+    127) printf 'no_ak\n'; return 0 ;;
+  esac
+  if [[ "${after}" == granted=1* ]]; then
+    printf 'still\n'
+    return 0
+  fi
+  if [[ "${rc}" != '0' || "${after}" != granted=0* ]]; then
+    printf 'failed\n'
+    return 0
+  fi
+  if [[ "${before}" == granted=1* ]]; then
+    printf 'revoked\n'
+    return 0
+  fi
+  printf 'none\n'
+}
+
+# Revoke on every <host> in parallel and print the summary in input order.
+# Runs in a subshell that owns the temp dir and the traps.
+# @param $1 lenient  1 = unreachable / not-installed hosts do not fail the exit
+#                    code (a fleet report, like remote-status-all); 0 = they do
+# @param $@ hosts
+# @returns 0 · 1 (see the public commands)
+function __ak.sudo.remote.revokeHosts() {
+  local -r lenient="$1"
+  shift
+  local -a hosts=("$@")
+  (
+    local tmpDir=''
+    tmpDir="$(mktemp -d "${TMPDIR:-/tmp}/ak-sudo-revoke-many.XXXXXX")" || exit 1
+    trap 'rm -rf "${tmpDir}"' EXIT
+    # Reap the jobs BEFORE the EXIT rm (see remote-status-all).
+    trap 'kill $(jobs -p) 2> /dev/null; exit 130' INT
+    trap 'kill $(jobs -p) 2> /dev/null; exit 143' TERM
+
+    # Strict host keys: nothing secret travels, but a revoke is no place for a
+    # first contact either.
+    __ak.sudo.remote.pollAll "${tmpDir}" "${AK_SUDO_REMOTE_MANY_TIMEOUT:-${AK_SUDO_REMOTE_MANY_TIMEOUT_DEFAULT}}" \
+      0 "${__AK_SUDO_REMOTE_REVOKE_CMD}" "${hosts[@]}"
+
+    local -i width=0
+    local host=''
+    for host in "${hosts[@]}"; do
+      (( ${#host} > width )) && width=${#host}
+    done
+    local cGreen='' cRed='' cYellow='' cGray='' cNC=''
+    if [[ -t 1 ]]; then
+      cGreen="${AK_COLOR_Green}"
+      cRed="${AK_COLOR_Red}"
+      cYellow="${AK_COLOR_Yellow}"
+      cGray="${AK_COLOR_Gray}"
+      cNC="${AK_COLOR_NC}"
+    fi
+
+    local -i i=0 nRevoked=0 nNone=0 nFailed=0 nUnreachable=0
+    local rc='' out='' before='' after='' state='' dl='' clock='' mark='' color='' label='' details=''
+    for host in "${hosts[@]}"; do
+      i+=1
+      rc="$(cat "${tmpDir}/${i}.rc" 2> /dev/null)"
+      out="$(cat "${tmpDir}/${i}.out" 2> /dev/null)"
+      before="$(printf '%s\n' "${out}" | grep -E '^granted=[01]' | head -n 1)"
+      after="$(printf '%s\n' "${out}" | grep -E '^granted=[01]' | tail -n 1)"
+      state="$(__ak.sudo.remote.revokeState "${rc}" "${before}" "${after}")"
+      details=''
+
+      case "${state}" in
+        revoked)
+          nRevoked+=1; mark='✔'; color="${cGreen}"; label='revoked'
+          dl="${before##*deadline_epoch=}"
+          dl="${dl%%[![:digit:]]*}"
+          [[ -n "${dl}" ]] && clock="$(__ak.sudo.epochClock "${dl}")" && label+=" (was until ${clock})"
+          ;;
+        none)        nNone+=1; mark='·'; color="${cGray}"; label='no grant' ;;
+        unreachable) nUnreachable+=1; mark='✘'; color="${cYellow}"; label="unreachable (ssh rc=${rc})" ;;
+        timeout)     nFailed+=1; mark='✘'; color="${cRed}"; label="timed out — state UNKNOWN, check: ak.sudo.remote-status ${host}" ;;
+        no_ak)       nUnreachable+=1; mark='✘'; color="${cGray}"; label='ankor-shell not installed' ;;
+        still)       nFailed+=1; mark='✘'; color="${cRed}"; label='STILL GRANTED — revoke failed, check the host' ;;
+        *)           nFailed+=1; mark='✘'; color="${cRed}"; label="failed (rc=${rc:-?})" ;;
+      esac
+      printf '%s%s %-*s  %s%s\n' "${color}" "${mark}" "${width}" "${host}" "${label}" "${cNC}"
+      # Failures: the host's last significant output lines, indented.
+      if [[ "${state}" != 'revoked' && "${state}" != 'none' ]]; then
+        details="$(printf '%s\n%s\n' "${out}" "$(cat "${tmpDir}/${i}.err" 2> /dev/null)" \
+          | grep -Ev 'no job control|cannot set terminal process group|^granted=|^[[:space:]]*$' \
+          | tail -n 5 | sed 's/^/    /')"
+        [[ -n "${details}" ]] && printf '%s\n' "${details}"
+      fi
+    done
+
+    printf '\n%d revoked / %d no grant / %d unreachable / %d failed\n' \
+      "${nRevoked}" "${nNone}" "${nUnreachable}" "${nFailed}"
+    (( nFailed > 0 )) && exit 1
+    (( nUnreachable > 0 && ! lenient )) && exit 1
+    exit 0
+  )
+}
+
+##
+# Revoke the temporary sudo grant on SEVERAL hosts at once, in parallel, with
+# a per-host summary in input order: ✔ revoked (was until …) · no grant ·
+# ✘ unreachable / still granted / failed. Never prompts (no tty, BatchMode).
+# @param $@ hosts — ~/.ssh/config aliases or user@host, space or comma separated
+# @env AK_SUDO_REMOTE_MANY_TIMEOUT per-host deadline in seconds (default 45)
+# @returns 0 every host handled (revoked or nothing to revoke) · 1 any host
+#          unreachable / failed, or a usage error
+#
+# @example
+#   ak.sudo.remote-revoke-many vps-alpha vps-bravo
+#   ak.sudo.remote-revoke-many vps-alpha,vps-bravo,vps-charlie
+##
+function ak.sudo.remote-revoke-many() {
+  local parsed=''
+  parsed="$(__ak.sudo.remote.parseHosts 'ak.sudo.remote-revoke-many' '' "$@")" || return 1
+  if [[ -z "${parsed}" ]]; then
+    ak.sh.err 'Usage: ak.sudo.remote-revoke-many <host>...'
+    return 1
+  fi
+
+  local -a hosts=()
+  local host=''
+  while IFS= read -r host; do hosts+=("${host}"); done <<< "${parsed}"
+  __ak.sudo.remote.revokeHosts 0 "${hosts[@]}"
+}
+
+##
+# Revoke the temporary sudo grant on EVERY connectable host of ~/.ssh/config
+# (the same list as ak.sudo.remote-status-all), in parallel, with the summary
+# of ak.sudo.remote-revoke-many. A fleet report: unreachable hosts and hosts
+# without ankor-shell are listed, not counted as failures.
+# @env AK_SUDO_REMOTE_MANY_TIMEOUT per-host deadline in seconds (default 45)
+# @returns 0 · 1 a revoke FAILED on a reachable host (grant still there, or
+#          state unknown after a timeout) — check that host
+#
+# @example
+#   ak.sudo.remote-revoke-all
+##
+function ak.sudo.remote-revoke-all() {
+  if (( $# > 0 )); then
+    ak.sh.err "Usage: ak.sudo.remote-revoke-all  (no arguments)"
+    return 1
+  fi
+
+  local -a hosts=()
+  local host=''
+  while IFS= read -r host; do
+    [[ -n "${host}" ]] && hosts+=("${host}")
+  done < <(ak.ssh.hosts)
+
+  if (( ${#hosts[@]} == 0 )); then
+    echo "ak.sudo.remote-revoke-all: no connectable hosts in ~/.ssh/config — nothing to revoke."
+    return 0
+  fi
+  __ak.sudo.remote.revokeHosts 1 "${hosts[@]}"
 }
