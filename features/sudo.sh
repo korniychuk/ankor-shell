@@ -20,8 +20,12 @@
 #   ak.sudo.status          # is it active? when does it auto-revoke?
 #   ak.sudo.revoke          # revoke now + cancel the timer
 #
-# Remote (ak.sudo.* on another host over SSH, with host completion):
+# Remote (ak.sudo.* on another host over SSH, with host completion) —
+# features/sudo-remote.sh and features/sudo-remote-many.sh:
 #   ak.sudo.remote-lend HOST 60     # one-shot lend on HOST
+#   ak.sudo.remote-lend-many 20 H1 H2 H3  # same password everywhere: ONE hidden
+#                                   # prompt (only if a host needs it), canary-
+#                                   # checked, parallel; per-host summary
 #   ak.sudo.remote-status HOST      # grant state of one host
 #   ak.sudo.remote-status-all       # overview across all ssh-config hosts
 #   ak.sudo.remote-revoke HOST

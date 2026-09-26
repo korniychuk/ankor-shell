@@ -16,14 +16,14 @@ There is no build step, no package manager, no test framework, and no linter con
 
 ### Module Structure
 
-`index.sh` → sources `config.sh` + all `sdk/*.sh` modules in order:
+`index.sh` → sources `config.sh` + all `sdk/*.sh` modules in order, then `features/*.sh`, then `completions/load.sh`:
 
 | Module | Domain prefix | Purpose |
 |--------|--------------|---------|
 | `sdk/str.sh` | `ak.str.*` | String manipulation (uses Perl for regex) |
 | `sdk/array.sh` | `ak.array.*` | Array utilities (`inArray`, `joinBy`) |
 | `sdk/bash.sh` | `ak.bash.*` | Bash version checking |
-| `sdk/shell.sh` | `ak.sh.*` | Core shell utilities, colors, user interaction, parameter validation |
+| `sdk/shell.sh` | `ak.sh.*` | Core shell utilities, colors, user interaction (`confirm`, hidden `readSecret`), `timeout`, parameter validation |
 | `sdk/rnd.sh` | `ak.rnd.*` | Random generation (ObjectID, integers, time) |
 | `sdk/doc.sh` | — | Documentation utilities |
 | `sdk/os.sh` | `ak.os.type.*` | OS detection (macOS, Linux, BSD, Windows, Solaris) |
@@ -34,6 +34,9 @@ There is no build step, no package manager, no test framework, and no linter con
 | `sdk/docker.sh` | `ak.docker.*` | Docker registry tags, network ops |
 | `sdk/downloader.sh` | `ak.downloader.*` | M3U8/HLS stream downloader (ffmpeg) |
 | `sdk/macos.sh` | (conditional) | macOS-specific functions, loaded only on macOS |
+| `features/sudo.sh` | `ak.sudo.*` | Time-boxed passwordless sudo: `lend` (incl. `--password-fd`), `revoke`, `status` (`--porcelain`), reboot-safe auto-revoke |
+| `features/sudo-remote.sh` | `ak.sudo.remote-*` | The same over SSH: `remote-lend/revoke/status`, parallel `remote-status-all` (shared `__ak.sudo.remote.pollAll`) |
+| `features/sudo-remote-many.sh` | `ak.sudo.remote-lend-many` | One hidden password prompt → canary-checked parallel lend on many hosts, per-host summary |
 
 ### CaLS (Custom and Local Scripts)
 
