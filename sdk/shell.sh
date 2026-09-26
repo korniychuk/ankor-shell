@@ -158,6 +158,18 @@ function __ak.sh.readSecret.skipEscape() {
   return 0
 }
 
+# Discard the input still queued on <fd> (raw mode: min 1 time 0 is on).
+# @param $1 fd
+function __ak.sh.readSecret.drain() {
+  local REPLY=''
+  if [[ -n "${ZSH_VERSION:-}" ]]; then
+    while read -r -t 0 -k1 -u "$1" 2> /dev/null; do :; done
+  else
+    while read -r -t 0 -u "$1" 2> /dev/null; do __ak.sh.readSecret.readChar "$1" || break; done
+  fi
+  return 0
+}
+
 # The input loop of ak.sh.readSecret: reads <fd> char by char, echoes `*` per
 # char to <fd>, prints the collected secret to stdout at the end.
 # Returns 0 (Enter / Ctrl-D) or __AK_SH_SECRET_RC_CANCEL (Ctrl-C as a byte).
@@ -229,10 +241,10 @@ function __ak.sh.readSecret.loop() {
 ##
 function ak.sh.readSecret() {
   if [[ -n "${ZSH_VERSION:-}" ]]; then
-    setopt localoptions noxtrace
+    setopt localoptions noxtrace noallexport
   else
     local -
-    set +x
+    set +x +a
   fi
   local -r promptText="${1:-Password: }"
 
@@ -252,12 +264,15 @@ function ak.sh.readSecret() {
     saved="$(stty -g <&3)" || exit 1
     trap 'stty "${saved}" <&3 2> /dev/null' EXIT
     trap 'stty "${saved}" <&3 2> /dev/null; printf "\n" >&3; exit ${__AK_SH_SECRET_RC_CANCEL}' INT
-    trap 'stty "${saved}" <&3 2> /dev/null; printf "\n" >&3; exit ${__AK_SH_SECRET_RC_SIGTERM}' TERM HUP
+    trap 'stty "${saved}" <&3 2> /dev/null; printf "\n" >&3; exit ${__AK_SH_SECRET_RC_SIGTERM}' TERM HUP QUIT
 
     stty -echo -icanon min 1 time 0 <&3 || exit 1
     printf '%s' "${promptText}" >&3
     __ak.sh.readSecret.loop 3
     rc=$?
+    # Whatever is still queued (the rest of a multi-line paste) must not reach
+    # the interactive shell as a command — and its history.
+    __ak.sh.readSecret.drain 3
     stty "${saved}" <&3
     printf '\n' >&3
     exit "${rc}"

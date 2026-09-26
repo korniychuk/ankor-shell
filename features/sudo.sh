@@ -96,7 +96,9 @@ function __ak.sudo.preflight() {
 # and ak.sudo.remote-lend — the remote wrapper validates LOCALLY, so nothing
 # shell-escapable can ever reach the composed ssh command.
 function __ak.sudo.validMinutes() {
-  [[ "${1:-}" =~ ^[0-9]+$ ]] || return 1
+  # No leading zero: bash arithmetic would read `0020` as octal (and choke on
+  # `08`), zsh as decimal — one number must mean one window everywhere.
+  [[ "${1:-}" =~ ^[1-9][0-9]*$ ]] || return 1
   (( $1 >= 1 && $1 <= 1440 ))
 }
 
@@ -456,12 +458,13 @@ function __ak.sudo.classifyAuthError() {
 # (the password never does: it travels through a pipe only).
 # @param $1 fd  the descriptor to read ONE line (the password) from
 function __ak.sudo.authenticateFromFd() {
-  # xtrace would print the password — off for this function only.
+  # xtrace would print the password, allexport would hand it to every child's
+  # environment — both off for this function only.
   if [[ -n "${ZSH_VERSION:-}" ]]; then
-    setopt localoptions noxtrace
+    setopt localoptions noxtrace noallexport
   else
     local -
-    set +x
+    set +x +a
   fi
 
   local -r fd="$1"
@@ -474,6 +477,9 @@ function __ak.sudo.authenticateFromFd() {
   # "no password" case, not an error.
   local pw=''
   IFS= read -r -u "${fd}" pw
+  # The pipe is drained: close it so nothing spawned later inherits the fd
+  # (fd is a validated single digit 3..9).
+  eval "exec ${fd}<&-"
 
   if [[ -z "${pw}" ]]; then
     unset pw
@@ -481,6 +487,17 @@ function __ak.sudo.authenticateFromFd() {
     ak.sh.err "ak.sudo.lend: no password on fd ${fd}, and sudo is not passwordless here."
     return "${AK_SUDO_RC_NO_PASSWORD}"
   fi
+
+  # A password is only PROVEN when sudo actually read it. A stale credential
+  # cache (timestamp_type=global) or a rule that makes `-v` free would let
+  # `sudo -S -v` succeed without looking at the password — and the calling
+  # side would then send an unchecked password to the whole fleet. So: clear
+  # the cache first, and if sudo is still passwordless, say so on stdout.
+  sudo -k
+  __ak.sudo.passwordless && printf 'lend_auth=unverified\n'
+  # `attempt` marks that the password is about to be checked: a canary that
+  # dies after this line (timeout, dropped connection) is NOT "unchecked".
+  printf 'lend_auth=attempt\n'
 
   local errFile=''
   errFile="$(mktemp "${TMPDIR:-/tmp}/ak-sudo-auth.XXXXXX" 2> /dev/null)"
@@ -561,6 +578,9 @@ function __ak.sudo.lendWithPasswordFd() {
     ak.sh.err "ak.sudo.lend: the grant vanished during the lend — a sudo password is needed."
     return "${AK_SUDO_RC_NO_PASSWORD}"
   fi
+  # Our fresh credential must not outlive a FAILED lend (a global timestamp
+  # would keep sudo passwordless for timestamp_timeout minutes).
+  (( onOwnCache )) && sudo -k
   return "${lendRc}"
 }
 

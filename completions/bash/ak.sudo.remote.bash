@@ -19,7 +19,13 @@ function __ak_sudo_remote_bash_untyped_hosts() {
   while IFS= read -r host; do
     [[ -z "${host}" || "${typed}" == *" ${host} "* ]] && continue
     printf '%s\n' "${host}"
-  done < <(ak.ssh.hosts 2> /dev/null)
+  done < <(__ak_sudo_remote_bash_hosts)
+}
+
+# Echo the ssh host aliases that are plain names. `compgen -W` EVALUATES its
+# word list, so an alias like `$(…)` from an Included config would run here.
+function __ak_sudo_remote_bash_hosts() {
+  ak.ssh.hosts 2> /dev/null | grep -E '^[A-Za-z0-9._@-]+$'
 }
 
 function _ak_sudo_remote_bash() {
@@ -39,7 +45,7 @@ function _ak_sudo_remote_bash() {
 
   if (( COMP_CWORD == 1 )); then
     local hosts=''
-    hosts="$(ak.ssh.hosts 2> /dev/null)"
+    hosts="$(__ak_sudo_remote_bash_hosts)"
     mapfile -t COMPREPLY < <(compgen -W "${hosts}" -- "${cur}")
     return 0
   fi

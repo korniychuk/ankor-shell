@@ -138,6 +138,8 @@ function __ak.sudo.remote.parseHosts() {
   shift 2
 
   local seen=' ' host=''
+  # Lower-cased: ssh lower-cases host names itself, so `Alpha` and `alpha`
+  # are one host and must not become two concurrent jobs sharing result files.
   # shellcheck disable=SC2020  # a char-for-char map: comma, space, tab → newline
   while IFS= read -r host; do
     [[ -z "${host}" ]] && continue
@@ -152,7 +154,14 @@ function __ak.sudo.remote.parseHosts() {
     [[ "${seen}" == *" ${host} "* ]] && continue
     seen+="${host} "
     printf '%s\n' "${host}"
-  done < <(printf '%s\n' "$@" | tr ', \t' '\n\n\n')
+  done < <(printf '%s\n' "$@" | tr ', \t' '\n\n\n' | tr '[:upper:]' '[:lower:]')
+}
+
+# Drop every C0 control character except tab and newline (plus DEL) from
+# stdin: a host's stderr/motd goes to the operator's terminal and must not be
+# able to drive it (OSC clipboard writes, title changes, cursor games).
+function __ak.sudo.remote.stripControls() {
+  tr -d '\000-\010\013-\037\177'
 }
 
 # Run <remoteCmd> on every <host> in PARALLEL, without a tty or any prompt, and
@@ -160,7 +169,8 @@ function __ak.sudo.remote.parseHosts() {
 #   <outDir>/<i>.out  remote stdout    <outDir>/<i>.err  ssh + remote stderr
 #   <outDir>/<i>.rc   exit code (124 = timed out, 255 = ssh failed)
 # The caller owns <outDir> and its cleanup (a subshell with EXIT/INT/TERM
-# traps — the INT/TERM ones must `kill $(jobs -p)` before the EXIT rm).
+# traps — the INT/TERM ones must kill the jobs before the EXIT rm) and
+# declares `local -a jobPids=()`: every job's pid is appended to it.
 #
 # BatchMode fails fast instead of hanging the parallel poll on a passphrase
 # prompt. ak.sh.timeout on top: ConnectTimeout covers ONLY the connect phase, a
@@ -178,7 +188,13 @@ function __ak.sudo.remote.pollAll() {
   shift 4
 
   local -a sshOpts=(-T -n -o BatchMode=yes -o "ConnectTimeout=${AK_SUDO_REMOTE_POLL_CONNECT_TIMEOUT}")
-  (( acceptNewKeys )) && sshOpts+=(-o StrictHostKeyChecking=accept-new)
+  # Explicit either way: the command line beats any ssh_config / Include that
+  # relaxes the check (strict = an unknown key fails, nothing is trusted).
+  if (( acceptNewKeys )); then
+    sshOpts+=(-o StrictHostKeyChecking=accept-new)
+  else
+    sshOpts+=(-o StrictHostKeyChecking=yes)
+  fi
 
   local -i i=0
   local host=''
@@ -189,6 +205,9 @@ function __ak.sudo.remote.pollAll() {
         > "${outDir}/${i}.out" 2> "${outDir}/${i}.err"
       echo $? > "${outDir}/${i}.rc"
     ) 2> /dev/null &   # the job's own notices (e.g. "Killed") — ssh stderr is captured above
+    # The caller's INT/TERM traps kill these pids: `jobs -p` is empty inside a
+    # zsh subshell, so the job table cannot be relied on.
+    jobPids+=("$!")
   done
   wait
 }
@@ -238,8 +257,9 @@ function ak.sudo.remote-status-all() {
     trap 'rm -rf "${tmpDir}"' EXIT
     # Reap the per-host jobs BEFORE the EXIT rm: a surviving job re-creating
     # its .rc file mid-removal would leave the temp dir behind (ENOTEMPTY).
-    trap 'kill $(jobs -p) 2> /dev/null; exit 130' INT
-    trap 'kill $(jobs -p) 2> /dev/null; exit 143' TERM
+    local -a jobPids=()
+    trap 'kill "${jobPids[@]}" 2> /dev/null; exit 130' INT
+    trap 'kill "${jobPids[@]}" 2> /dev/null; exit 143' TERM
 
     # `command -v` probe: an explicit 127 beats guessing by stderr noise
     # (`bash -i` without a tty prints "no job control in this shell").
@@ -370,8 +390,9 @@ function __ak.sudo.remote.revokeHosts() {
     tmpDir="$(mktemp -d "${TMPDIR:-/tmp}/ak-sudo-revoke-many.XXXXXX")" || exit 1
     trap 'rm -rf "${tmpDir}"' EXIT
     # Reap the jobs BEFORE the EXIT rm (see remote-status-all).
-    trap 'kill $(jobs -p) 2> /dev/null; exit 130' INT
-    trap 'kill $(jobs -p) 2> /dev/null; exit 143' TERM
+    local -a jobPids=()
+    trap 'kill "${jobPids[@]}" 2> /dev/null; exit 130' INT
+    trap 'kill "${jobPids[@]}" 2> /dev/null; exit 143' TERM
 
     # Strict host keys: nothing secret travels, but a revoke is no place for a
     # first contact either.
@@ -422,6 +443,7 @@ function __ak.sudo.remote.revokeHosts() {
       # Failures: the host's last significant output lines, indented.
       if [[ "${state}" != 'revoked' && "${state}" != 'none' ]]; then
         details="$(printf '%s\n%s\n' "${out}" "$(cat "${tmpDir}/${i}.err" 2> /dev/null)" \
+          | __ak.sudo.remote.stripControls \
           | grep -Ev 'no job control|cannot set terminal process group|^granted=|^[[:space:]]*$' \
           | tail -n 5 | sed 's/^/    /')"
         [[ -n "${details}" ]] && printf '%s\n' "${details}"

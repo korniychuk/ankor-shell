@@ -23,7 +23,7 @@ declare -r __AK_SUDO_MANY_DETAIL_LINES=5               # host output lines shown
 declare -r __AK_SUDO_MANY_RC_CANCELLED=130             # password prompt cancelled (Ctrl-C / empty)
 declare -r __AK_SUDO_MANY_NOISE_RE='no job control|cannot set terminal process group|^[[:space:]]*$'
 # shellcheck disable=SC2016  # expanded when the trap fires, not here
-declare -r __AK_SUDO_MANY_ON_INT='kill $(jobs -p) 2> /dev/null; exit 130'
+declare -r __AK_SUDO_MANY_ON_INT='kill "${jobPids[@]}" 2> /dev/null; exit 130'
 declare -r __AK_SUDO_SECONDS_PER_MINUTE=60
 
 # ── pure helpers ─────────────────────────────────────────────────────────────
@@ -281,6 +281,7 @@ function __ak.sudo.many.successNote() {
 function __ak.sudo.many.formatDetails() {
   printf '%s\n' "${1:-}" \
     | sed -e $'s/\e\\[[0-9;]*[A-Za-z]//g' -e $'s/\r$//' \
+    | __ak.sudo.remote.stripControls \
     | grep -Ev "${__AK_SUDO_MANY_NOISE_RE}" \
     | tail -n "${__AK_SUDO_MANY_DETAIL_LINES}" \
     | sed 's/^/    /'
@@ -357,10 +358,11 @@ function __ak.sudo.many.launch() {
   local -r base="${tmpDir}/${phase}-${host}"
   (
     { [[ -n "${pw}" ]] && printf '%s\n' "${pw}"; } \
-      | ak.sh.timeout "${timeoutSec}" ssh -T -o BatchMode=yes -o "ConnectTimeout=${connectSec}" \
-          -- "${host}" "${lendCmd}" > "${base}.out" 2> "${base}.err"
+      | ak.sh.timeout "${timeoutSec}" ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes \
+          -o "ConnectTimeout=${connectSec}" -- "${host}" "${lendCmd}" > "${base}.out" 2> "${base}.err"
     echo $? > "${base}.rc.tmp" && mv -f "${base}.rc.tmp" "${base}.rc"
   ) 2> /dev/null &   # the job's own notices (e.g. "Killed") — ssh stderr is captured above
+  jobPids+=("$!")
   unset pw
 }
 
@@ -379,6 +381,8 @@ function __ak.sudo.many.record() {
   hostResult[${host}]="${class}"
   hostRc[${host}]="${rc}"
   hostErr[${host}]="$(cat "${base}.err" 2> /dev/null)"
+  # The host's `lend_auth=…` markers (space-joined), see __ak.sudo.authenticateFromFd.
+  hostAuth[${host}]="$(printf '%s\n' "${out}" | grep -o '^lend_auth=[a-z]*' | cut -d= -f2 | tr '\n' ' ')"
 
   __ak.sudo.many.isSuccess "${class}" || return 0
   local isCanary=''
@@ -473,15 +477,27 @@ function __ak.sudo.many.lendRound() {
       __ak.sudo.many.launch "${phase}" "${host}" "${pw}"
       __ak.sudo.many.await "${phase}" "${host}" "${host}"
       case "${hostResult[${host}]}" in
-        ok | relent | shortened | no_cache) canary="${host}" ;;   # password accepted
+        ok | relent | shortened)
+          # Proof needs sudo to have READ the password: `unverified` means the
+          # host was passwordless before the check and sudo never looked.
+          if [[ " ${hostAuth[${host}]:-} " == *' unverified '* ]]; then
+            skipReason="password not checked on ${host} (sudo needed none there)"
+          else
+            canary="${host}"
+          fi
+          ;;
         bad_password) skipReason="password rejected on ${host}" ;;
-        unreachable | timeout | no_ak | outdated | needs_tty) ;;  # not checked — next canary
+        unreachable | timeout)
+          # Died after the check began → unknown outcome, not "unchecked".
+          [[ " ${hostAuth[${host}]:-} " == *' attempt '* ]] \
+            && skipReason="password not proven on ${host} (${hostResult[${host}]} during the check)"
+          ;;
+        no_ak | outdated | needs_tty) ;;   # never got to the password — next canary
         *) skipReason="password not proven on ${host} (${hostResult[${host}]}, rc=${hostRc[${host}]:-?})" ;;
       esac
     fi
   done
-  # Only a password proven on the canary travels further. A no_cache canary
-  # proved it but cannot lend itself — it stays ✘, the wave still gets the password.
+  # Only a password proven on the canary travels further.
   [[ -z "${canary}" ]] && pw=''
 
   local -a wave=("${restNeed[@]}" "${freeList[@]}")
@@ -526,6 +542,7 @@ function __ak.sudo.many.run() {
   local -A hostRc=()
   local -A hostErr=()
   local -A hostNote=()
+  local -A hostAuth=()
   local -r timeoutSec="${AK_SUDO_REMOTE_MANY_TIMEOUT:-${AK_SUDO_REMOTE_MANY_TIMEOUT_DEFAULT}}"
   local -r connectSec="${AK_SUDO_REMOTE_TIMEOUT:-${__AK_SUDO_MANY_CONNECT_TIMEOUT_DEFAULT}}"
   # The host's login shell moves ssh's stdin (the password pipe) to fd 3 and
@@ -548,6 +565,13 @@ function __ak.sudo.many.run() {
     cNC="${AK_COLOR_NC}"
   fi
 
+  # Echo off while the probe runs (up to AK_SUDO_REMOTE_ALL_TIMEOUT): a
+  # password typed ahead of the prompt must not land in the scrollback in
+  # clear text. readSecret keeps the queued keystrokes. ttySaved belongs to
+  # the enclosing subshell, whose EXIT trap restores it on every path.
+  if ttySaved="$(stty -g < /dev/tty 2> /dev/null)"; then
+    stty -echo < /dev/tty 2> /dev/null
+  fi
   __ak.sudo.many.probe "${hosts[@]}" || return 1
 
   local -a needHosts=() activeHosts=()
@@ -564,11 +588,13 @@ function __ak.sudo.many.run() {
   if (( ${#needHosts[@]} > 0 )); then
     __ak.sudo.many.askPassword "sudo password for ${#needHosts[@]} host(s) ($(__ak.sudo.many.join "${needHosts[@]}")): "
     askRc=$?
-    if (( askRc != 0 )); then
-      unset pw
-      ak.sh.err "ak.sudo.remote-lend-many: cancelled — no host was changed."
-      return "${askRc}"
-    fi
+  fi
+  # readSecret restores the -echo state it found; put the terminal back now.
+  [[ -n "${ttySaved}" ]] && stty "${ttySaved}" < /dev/tty 2> /dev/null
+  if (( askRc != 0 )); then
+    unset pw
+    ak.sh.err "ak.sudo.remote-lend-many: cancelled — no host was changed."
+    return "${askRc}"
   fi
   (( ${#activeHosts[@]} > 0 )) && __ak.sudo.many.lendRound l1 0 "${pw}" "${activeHosts[@]}"
   unset pw
@@ -619,10 +645,10 @@ function __ak.sudo.many.run() {
 function ak.sudo.remote-lend-many() {
   # xtrace would print the password — off for this call only.
   if [[ -n "${ZSH_VERSION:-}" ]]; then
-    setopt localoptions noxtrace
+    setopt localoptions noxtrace noallexport
   else
     local -
-    set +x
+    set +x +a
   fi
 
   local parsed=''
@@ -642,13 +668,17 @@ function ak.sudo.remote-lend-many() {
       ak.sh.err "ak.sudo.remote-lend-many: mktemp failed."
       exit 1
     }
-    trap 'rm -rf "${tmpDir}"' EXIT
+    # ttySaved: the terminal state before the probe phase muted echo (run).
+    local ttySaved=''
+    trap 'rm -rf "${tmpDir}"; [[ -n "${ttySaved}" ]] && stty "${ttySaved}" < /dev/tty 2> /dev/null' EXIT
     # Reap the jobs BEFORE the EXIT rm (a job re-creating its .rc would leave
     # the dir behind). Ctrl-C after lends started: some hosts may already hold
-    # a grant — check with ak.sudo.remote-status-all.
+    # a grant — check with ak.sudo.remote-status-all. ssh itself (own process
+    # group under timeout) runs on until its own deadline.
+    local -a jobPids=()
     # shellcheck disable=SC2064  # the constant IS the trap code, expanding it now is the point
     trap "${__AK_SUDO_MANY_ON_INT}" INT
-    trap 'kill $(jobs -p) 2> /dev/null; exit 143' TERM
+    trap 'kill "${jobPids[@]}" 2> /dev/null; exit 143' TERM
     __ak.sudo.many.run "${mins}" "${hosts[@]}"
   )
 }
