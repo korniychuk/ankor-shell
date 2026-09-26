@@ -116,6 +116,154 @@ function ak.sh.confirm() {
   fi
 }
 
+declare -r __AK_SH_SECRET_RC_CANCEL=130     # Ctrl-C, same code as SIGINT
+declare -r __AK_SH_SECRET_RC_SIGTERM=143
+declare -r __AK_SH_CSI_FINAL_MIN=64         # '@' — an escape sequence's final byte is @..~
+declare -r __AK_SH_CSI_FINAL_MAX=126        # '~'
+
+# Read ONE character from <fd> into the caller's REPLY (dynamic scope — the
+# caller declares `local REPLY=''`). A newline is returned as a character, not
+# swallowed as a delimiter.
+# @param $1 fd
+function __ak.sh.readSecret.readChar() {
+  if [[ -n "${ZSH_VERSION:-}" ]]; then
+    IFS= read -r -k1 -u "$1"
+  else
+    IFS= read -r -n1 -d '' -u "$1"
+  fi
+}
+
+# Consume the rest of an escape sequence whose ESC was just read: CSI
+# (`ESC [ … final`, incl. the bracketed-paste markers `ESC [200~` / `ESC [201~`),
+# SS3 (`ESC O x`), or a two-byte `ESC x`. Everything is dropped — a secret
+# never contains escape sequences, and arrows/F-keys must not end up in it.
+# @param $1 fd
+function __ak.sh.readSecret.skipEscape() {
+  local -r fd="$1"
+  local REPLY=''
+
+  __ak.sh.readSecret.readChar "${fd}" || return 0
+  if [[ "${REPLY}" == 'O' ]]; then
+    __ak.sh.readSecret.readChar "${fd}"
+    return 0
+  fi
+  [[ "${REPLY}" == '[' ]] || return 0
+
+  # CSI: parameter/intermediate bytes, then ONE final byte in @..~
+  local -i code=0
+  while __ak.sh.readSecret.readChar "${fd}"; do
+    printf -v code '%d' "'${REPLY}"
+    (( code >= __AK_SH_CSI_FINAL_MIN && code <= __AK_SH_CSI_FINAL_MAX )) && return 0
+  done
+  return 0
+}
+
+# The input loop of ak.sh.readSecret: reads <fd> char by char, echoes `*` per
+# char to <fd>, prints the collected secret to stdout at the end.
+# Returns 0 (Enter / Ctrl-D) or __AK_SH_SECRET_RC_CANCEL (Ctrl-C as a byte).
+# @param $1 fd  a read-write descriptor on /dev/tty, already in -echo -icanon
+function __ak.sh.readSecret.loop() {
+  local -r fd="$1"
+  local REPLY=''
+  local secret=''
+  local -i i=0
+
+  while __ak.sh.readSecret.readChar "${fd}"; do
+    case "${REPLY}" in
+      $'\n' | $'\r' | $'\x04') break ;;
+      $'\x03') return "${__AK_SH_SECRET_RC_CANCEL}" ;;
+      $'\x7f' | $'\b')
+        [[ -z "${secret}" ]] && continue
+        secret="${secret%?}"
+        printf '\b \b' >&"${fd}"
+        ;;
+      $'\x15')
+        for (( i = 0; i < ${#secret}; i++ )); do printf '\b \b' >&"${fd}"; done
+        secret=''
+        ;;
+      $'\e') __ak.sh.readSecret.skipEscape "${fd}" ;;
+      '' | [[:cntrl:]]) ;;
+      *)
+        secret+="${REPLY}"
+        printf '*' >&"${fd}"
+        ;;
+    esac
+  done
+
+  printf '%s' "${secret}"
+  unset secret
+  return 0
+}
+
+##
+# Read a secret (password) from the terminal with `*` feedback — one star per
+# character — and print it to stdout. Made for command substitution (a fork and
+# a pipe, never a file):
+#
+#   pw="$(ak.sh.readSecret 'sudo password: ')"
+#
+# - Reads /dev/tty and writes the prompt and stars to /dev/tty: stdout carries
+#   the secret only, without a trailing newline.
+# - The terminal goes to `-echo -icanon` ONCE for the whole read and is restored
+#   from a `stty -g` snapshot on every exit path, signals included. NOT
+#   `read -s` per character: it turns echo back on between calls, and a fast
+#   paste landing in that gap would show in clear text.
+# - Enter ends; Backspace deletes a char; Ctrl-U clears; Ctrl-C cancels (130).
+#   Bracketed-paste markers are stripped, other escape sequences (arrows, F-keys)
+#   are ignored. Pasting works.
+# - No history: this is not zle/readline, nothing reaches HISTFILE.
+# - xtrace is switched off inside, so a caller's `set -x` cannot print the secret.
+# - Ctrl-C is a SIGINT to the whole foreground process group (ISIG stays on):
+#   a caller that must survive it sets its own INT trap around the call.
+#
+# @param {string} prompt text shown before the input (default 'Password: ')
+# @output the secret, without a trailing newline (empty when nothing was typed)
+# @returns 0 read (possibly empty) · 1 no terminal · 130 cancelled (Ctrl-C)
+#
+# @example
+#
+#   local pw=''
+#   pw="$(ak.sh.readSecret 'vault password: ')" || return
+#   [[ -z "${pw}" ]] && { echo 'cancelled' >&2; return 1; }
+#
+##
+function ak.sh.readSecret() {
+  if [[ -n "${ZSH_VERSION:-}" ]]; then
+    setopt localoptions noxtrace
+  else
+    local -
+    set +x
+  fi
+  local -r promptText="${1:-Password: }"
+
+  if ! { : < /dev/tty; } 2> /dev/null; then
+    ak.sh.err "ak.sh.readSecret: no terminal (/dev/tty) to read a secret from."
+    return 1
+  fi
+
+  # Subshell: its traps restore the terminal on EVERY exit path without
+  # replacing the caller's own traps.
+  (
+    # fd 3 = /dev/tty for the whole read. A literal number on purpose: a
+    # redirection cannot take it from a variable portably (bash and zsh).
+    local saved=''
+    local -i rc=0
+    exec 3<> /dev/tty
+    saved="$(stty -g <&3)" || exit 1
+    trap 'stty "${saved}" <&3 2> /dev/null' EXIT
+    trap 'stty "${saved}" <&3 2> /dev/null; printf "\n" >&3; exit ${__AK_SH_SECRET_RC_CANCEL}' INT
+    trap 'stty "${saved}" <&3 2> /dev/null; printf "\n" >&3; exit ${__AK_SH_SECRET_RC_SIGTERM}' TERM HUP
+
+    stty -echo -icanon min 1 time 0 <&3 || exit 1
+    printf '%s' "${promptText}" >&3
+    __ak.sh.readSecret.loop 3
+    rc=$?
+    stty "${saved}" <&3
+    printf '\n' >&3
+    exit "${rc}"
+  )
+}
+
 #
 # Search in the Shell history, highlighting matches, sorting results, limitate output
 #
