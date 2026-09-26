@@ -1,7 +1,7 @@
 ---
 id: 00f
 type: task
-status: in-progress
+status: done
 created: 2026-09-26
 ---
 
@@ -254,7 +254,9 @@ stdin ssh — это пайп с паролем (или пустой пайп д
 
 **Шаг 7 — сделан** (2026-09-26). `scripts/ankor-shell-update.sh` из `srv-ankor-vps`: 9 хостов `79a1f9b → a4d970f`, 0 ошибок; все отдают `granted=0 lend_api=1`; `remote-status-all` без `outdated` во флоте. Записи — в per-host ssh-логах `srv-ankor-vps` (`00716e5`).
 
-**Шаг 8 — ожидает оператора** (живая матрица, см. «Проверка»). Шаг 9 — после него.
+**Шаг 8 — сделан** (2026-09-26, оператор, zsh). Прошли: 1 (кэш sudo без tty работает, `no_cache` нет), 4 (после фикса из задачи 010: один `password rejected`, остальные `skipped`; faillock пуст), 5, 7 (rc 130, `echo icanon` восстановлены), 9 (дата в сводке), 10 (xtrace без пароля, tmp удалён). Не гонялись вживую: 2/2a/2b/3/6 — покрыты E2E-стендом (fake ssh + mock sudo, оба шелла) и логикой probe; 8 — вставка из KeePassXC работала во всех прогонах. Первый прогон теста 4 показал, что классификатор ответа sudo зависел от формулировки PAM и canary переезжал на следующий хост — исправлено и ужесточено в задаче 010 (там же security-review и hardening `7880802`).
+
+**Шаг 9 — сделан**: `srv-ankor-vps` `CLAUDE.md` (раздел «sudo on the VPSes») и `docs/MESH-OPERATIONS-RUNBOOK.md` описывают `remote-lend-many`, `remote-revoke-many`, `remote-revoke-all` и правило «агент никогда не запрашивает и не вводит пароль».
 
 ## Вне скоупа
 
