@@ -502,7 +502,7 @@ function __ak.sudo.authenticateFromFd() {
     return "${__AK_SUDO_AUTH_VIA_GRANT}"
   fi
 
-  [[ -n "${err}" ]] && ak.sh.err "sudo: ${err}"
+  [[ -n "${err}" ]] && ak.sh.err "${err}"
   return "$(__ak.sudo.classifyAuthError "${err}")"
 }
 
