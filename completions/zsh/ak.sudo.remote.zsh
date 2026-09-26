@@ -34,8 +34,10 @@ function _ak_sudo_remote_collect_hosts() {
   done < <(ak.ssh.hosts.described 2> /dev/null)
 }
 
-# ak.sudo.remote-lend-many [minutes] <host>...
-function _ak_sudo_remote_lend_many() {
+# ak.sudo.remote-lend-many [minutes] <host>... / ak.sudo.remote-revoke-many <host>...
+# @param $1 withMinutes  1 = offer the minute presets at position 2 (lend-many)
+function _ak_sudo_remote_many() {
+  local -r withMinutes="$1"
   local -a hosts=() typed=() presets=()
   local word=''
   # Words already typed (between the command and the current word); a
@@ -45,7 +47,7 @@ function _ak_sudo_remote_lend_many() {
   done
   _ak_sudo_remote_collect_hosts "${typed[@]}"
 
-  if (( CURRENT == 2 )); then
+  if (( withMinutes && CURRENT == 2 )); then
     presets=('15:minutes' '30:minutes (default)' '60:minutes' '120:minutes')
     _describe -t minutes 'minutes' presets
   fi
@@ -55,10 +57,10 @@ function _ak_sudo_remote_lend_many() {
 function _ak_sudo_remote() {
   local -a hosts=()
 
-  if [[ "${words[1]}" == 'ak.sudo.remote-lend-many' ]]; then
-    _ak_sudo_remote_lend_many
-    return
-  fi
+  case "${words[1]}" in
+    ak.sudo.remote-lend-many)   _ak_sudo_remote_many 1; return ;;
+    ak.sudo.remote-revoke-many) _ak_sudo_remote_many 0; return ;;
+  esac
 
   case "${CURRENT}" in
     2)
@@ -76,7 +78,7 @@ function _ak_sudo_remote() {
 # keeps configs without compinit working.
 if (( $+functions[compdef] )); then
   compdef _ak_sudo_remote ak.sudo.remote-lend ak.sudo.remote-revoke ak.sudo.remote-status \
-    ak.sudo.remote-lend-many
+    ak.sudo.remote-lend-many ak.sudo.remote-revoke-many
   # Same arrow separator the operator's ssh menu uses — scoped to our commands.
   zstyle ':completion:*:*:ak.sudo.remote-*:*' list-separator '→'
 fi

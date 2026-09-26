@@ -27,10 +27,12 @@ function _ak_sudo_remote_bash() {
   local -r minutePresets='15 30 60 120'
   COMPREPLY=()
 
-  if [[ "${COMP_WORDS[0]}" == 'ak.sudo.remote-lend-many' ]]; then
+  # *-many: hosts not typed yet at every position; lend-many also offers the
+  # minute presets at position 1.
+  if [[ "${COMP_WORDS[0]}" == 'ak.sudo.remote-lend-many' || "${COMP_WORDS[0]}" == 'ak.sudo.remote-revoke-many' ]]; then
     local words=''
     words="$(__ak_sudo_remote_bash_untyped_hosts)"
-    (( COMP_CWORD == 1 )) && words="${minutePresets} ${words}"
+    [[ "${COMP_WORDS[0]}" == 'ak.sudo.remote-lend-many' ]] && (( COMP_CWORD == 1 )) && words="${minutePresets} ${words}"
     mapfile -t COMPREPLY < <(compgen -W "${words}" -- "${cur}")
     return 0
   fi
@@ -49,4 +51,4 @@ function _ak_sudo_remote_bash() {
 }
 
 complete -F _ak_sudo_remote_bash ak.sudo.remote-lend ak.sudo.remote-revoke ak.sudo.remote-status \
-  ak.sudo.remote-lend-many
+  ak.sudo.remote-lend-many ak.sudo.remote-revoke-many
