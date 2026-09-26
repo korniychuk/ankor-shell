@@ -29,6 +29,8 @@
 #   ak.sudo.remote-status HOST      # grant state of one host
 #   ak.sudo.remote-status-all       # overview across all ssh-config hosts
 #   ak.sudo.remote-revoke HOST
+#   ak.sudo.remote-revoke-many H1 H2  # parallel revoke, per-host summary (no prompt)
+#   ak.sudo.remote-revoke-all       # the same on every ssh-config host
 #
 # ak.sudo.remote-* compose the remote command locally into ONE argv string, so
 # the raw form below is needed only when ankor-shell is absent LOCALLY:

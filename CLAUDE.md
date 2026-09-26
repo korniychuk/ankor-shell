@@ -35,7 +35,7 @@ There is no build step, no package manager, no test framework, and no linter con
 | `sdk/downloader.sh` | `ak.downloader.*` | M3U8/HLS stream downloader (ffmpeg) |
 | `sdk/macos.sh` | (conditional) | macOS-specific functions, loaded only on macOS |
 | `features/sudo.sh` | `ak.sudo.*` | Time-boxed passwordless sudo: `lend` (incl. `--password-fd`), `revoke`, `status` (`--porcelain`), reboot-safe auto-revoke |
-| `features/sudo-remote.sh` | `ak.sudo.remote-*` | The same over SSH: `remote-lend/revoke/status`, parallel `remote-status-all` (shared `__ak.sudo.remote.pollAll`) |
+| `features/sudo-remote.sh` | `ak.sudo.remote-*` | The same over SSH: `remote-lend/revoke/status`, parallel `remote-status-all`, `remote-revoke-many`, `remote-revoke-all` (shared `__ak.sudo.remote.pollAll`, host-list parser) |
 | `features/sudo-remote-many.sh` | `ak.sudo.remote-lend-many` | One hidden password prompt → canary-checked parallel lend on many hosts, per-host summary |
 
 ### CaLS (Custom and Local Scripts)

@@ -2,8 +2,12 @@
 
 ##
 # ak.sudo.remote-* — run the ak.sudo.* commands of features/sudo.sh on another
-# host over SSH. Sourced right after features/sudo.sh, whose helpers it reuses
-# (__ak.sudo.validMinutes, __ak.sudo.formatRemaining).
+# host over SSH: one host (remote-lend/revoke/status), the fleet in parallel
+# (remote-status-all, remote-revoke-many, remote-revoke-all). Sourced right
+# after features/sudo.sh, whose helpers it reuses (__ak.sudo.validMinutes,
+# __ak.sudo.formatRemaining, __ak.sudo.epochClock). The password-carrying
+# lend-many lives in features/sudo-remote-many.sh, on top of the parallel poll
+# and the host-list parser defined here.
 ##
 
 # ── remote control (ak.sudo.* on another host over SSH) ──────────────────────
