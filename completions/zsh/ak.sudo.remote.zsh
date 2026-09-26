@@ -5,29 +5,64 @@
 # `alias → user@hostname` (same menu the operator's ssh completion shows),
 # position 2 — minute presets (remote-lend only).
 #
+# ak.sudo.remote-lend-many: position 1 — minute presets AND hosts, positions
+# ≥ 2 — hosts not typed yet. Space is the canonical separator; commas are
+# accepted by the command, but nothing is completed after a comma.
+#
 # Naming: everything here is prefixed `_ak_` — NEVER take names from the zsh
 # completion namespace (`_ssh_hosts`, `_hosts`, ...): a same-named function
 # globally shadows the stock autoload one (see docs/tasks/00b, section 6).
 ##
 
-function _ak_sudo_remote() {
+# Fill the caller's `hosts` with `alias:description` entries, skipping the
+# aliases given as arguments (dynamic scope — the caller declares `hosts`).
+# @param $@ aliases to leave out
+function _ak_sudo_remote_collect_hosts() {
   # Initializers are mandatory: a bare `local name` prints `name=value` when the
   # parameter exists in an enclosing scope (zsh without TYPESET_SILENT) — inside
   # a completion widget that noise corrupts the menu.
-  local -a hosts=()
   local host='' description=''
+  hosts=()
+  while IFS=$'\t' read -r host description; do
+    [[ -z "${host}" ]] && continue
+    (( ${argv[(Ie)${host}]} )) && continue
+    if [[ -n "${description}" ]]; then
+      hosts+=("${host}:${description}")
+    else
+      hosts+=("${host}")
+    fi
+  done < <(ak.ssh.hosts.described 2> /dev/null)
+}
+
+# ak.sudo.remote-lend-many [minutes] <host>...
+function _ak_sudo_remote_lend_many() {
+  local -a hosts=() typed=() presets=()
+  local word=''
+  # Words already typed (between the command and the current word); a
+  # comma-joined word counts as several hosts.
+  for word in "${(@)words[2,CURRENT-1]}"; do
+    typed+=("${(@s:,:)word}")
+  done
+  _ak_sudo_remote_collect_hosts "${typed[@]}"
+
+  if (( CURRENT == 2 )); then
+    presets=('15:minutes' '30:minutes (default)' '60:minutes' '120:minutes')
+    _describe -t minutes 'minutes' presets
+  fi
+  _describe -t hosts 'ssh host' hosts
+}
+
+function _ak_sudo_remote() {
+  local -a hosts=()
+
+  if [[ "${words[1]}" == 'ak.sudo.remote-lend-many' ]]; then
+    _ak_sudo_remote_lend_many
+    return
+  fi
 
   case "${CURRENT}" in
     2)
-      hosts=()
-      while IFS=$'\t' read -r host description; do
-        [[ -z "${host}" ]] && continue
-        if [[ -n "${description}" ]]; then
-          hosts+=("${host}:${description}")
-        else
-          hosts+=("${host}")
-        fi
-      done < <(ak.ssh.hosts.described 2> /dev/null)
+      _ak_sudo_remote_collect_hosts
       _describe -t hosts 'ssh host' hosts
       ;;
     3)
@@ -40,7 +75,8 @@ function _ak_sudo_remote() {
 # library is sourced from the rc — extending fpath would be too late. The guard
 # keeps configs without compinit working.
 if (( $+functions[compdef] )); then
-  compdef _ak_sudo_remote ak.sudo.remote-lend ak.sudo.remote-revoke ak.sudo.remote-status
+  compdef _ak_sudo_remote ak.sudo.remote-lend ak.sudo.remote-revoke ak.sudo.remote-status \
+    ak.sudo.remote-lend-many
   # Same arrow separator the operator's ssh menu uses — scoped to our commands.
   zstyle ':completion:*:*:ak.sudo.remote-*:*' list-separator '→'
 fi
