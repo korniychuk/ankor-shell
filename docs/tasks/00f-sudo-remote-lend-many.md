@@ -1,7 +1,7 @@
 ---
 id: 00f
 type: task
-status: planned
+status: in-progress
 created: 2026-09-26
 ---
 
@@ -235,6 +235,26 @@ stdin ssh — это пайп с паролем (или пустой пайп д
   В пункт «Need unattended sudo → ask the operator…» добавить: нужны несколько хостов → просить `ak.sudo.remote-lend-many [min] h1 h2 …`. Пароль агент никогда не запрашивает и команду сам не запускает — ввод пароля только у оператора.
 - `docs/MESH-OPERATIONS-RUNBOOK.md` (строка про `ak.sudo.remote-lend`, ~283) — одно упоминание lend-many для многохостовых окон.
 - В `srv-ankor-vps` реальные имена хостов допустимы (приватный репо), в `ankor-shell` — только плейсхолдеры.
+
+## Ход выполнения
+
+**Шаги 1–6 — сделаны** (2026-09-26, `62136ed..a4d970f` в `master`, реализация — субагент Opus 5.5, review + gates — основная сессия). Файлы: `features/sudo.sh` (`--password-fd`, `AK_SUDO_RC_*`, `AK_SUDO_DEFAULT_MINUTES`, `lend_api=1`), `features/sudo-remote.sh` (move + `__ak.sudo.remote.pollAll`), `features/sudo-remote-many.sh` (lend-many, отдельный файл — в `sudo-remote.sh` не уложился), `sdk/shell.sh` (`ak.sh.readSecret`, `ak.sh.timeout` с эскалацией до SIGKILL), оба completion-файла, `CLAUDE.md`.
+
+Решения, принятые при реализации (отклонения от дизайна выше):
+
+1. **`sudo -S -v` — прямой потомок шелла, не внутри `$( )`.** Без tty кэш sudo (`timestamp_type=tty` → fallback ppid) привязан к родительскому PID; субшелл command substitution умирает вместе с кэшем, и `sudo tee` дальше получил бы ложный `NO_CACHE`. stderr sudo идёт в `mktemp`-файл (пароль — только через пайп). `__ak.sudo.authenticateFromFd` нельзя вызывать из `$( )`.
+2. **Remap провала lend в `AK_SUDO_RC_NO_PASSWORD`** только когда lend шёл на живом гранте (пароля не было или он отклонён здесь). На собственном кэше провал — настоящий: fail-closed откат заканчивается `sudo -k`, и это не «грант исчез».
+3. **`relent_other_password`** сигналится строкой `lend_auth=rejected` в stdout; третий аргумент `classify` — весь stdout хоста, не только porcelain.
+4. **Ctrl-C.** `readSecret` оставляет ISIG; lend-many ставит no-op INT trap вокруг запроса. Отмена на первом запросе → 130, ничего не тронуто; на retry-запросе → эти хосты ✘ `password not given`, остальные результаты остаются, rc 1. Ctrl-D = Enter.
+5. **Probe тоже строгий по host key** (не `accept-new`): ключ, принятый probe-ом, дальше был бы доверен lend-у. `status-all` оставлен как был.
+6. **Пароль уходит волне только после доказательства на canary**; canary, прошедший лишь на живом гранте (`relent_other_password`), доказательством не считается.
+7. **`ak.sh.timeout`**: `-k 5`, 137 нормализуется в 124, fallback-watchdog тоже добивает SIGKILL. Повод — зависание тестового стенда: `bash -i` под фейковым ssh ловил SIGTTOU и останавливался, а остановленный процесс SIGTERM не получает.
+8. Потоковая печать ✔ реализована (без fallback); `.rc` пишется через `mv` атомарно. Определение шелла — по `$ZSH_VERSION`, не через `ak.sh.isZsh` (он `ps`-based).
+9. `features/sudo.sh` — 401 LOC без комментариев (🟢), 701 непустых строк: цель «≤500 непустых» не достигнута из-за комментариев, не делим.
+
+**Шаг 7 — сделан** (2026-09-26). `scripts/ankor-shell-update.sh` из `srv-ankor-vps`: 9 хостов `79a1f9b → a4d970f`, 0 ошибок; все отдают `granted=0 lend_api=1`; `remote-status-all` без `outdated` во флоте. Записи — в per-host ssh-логах `srv-ankor-vps` (`00716e5`).
+
+**Шаг 8 — ожидает оператора** (живая матрица, см. «Проверка»). Шаг 9 — после него.
 
 ## Вне скоупа
 
