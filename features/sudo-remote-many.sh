@@ -11,7 +11,7 @@
 #   reason, successNote, formatDetails) take everything as parameters and run
 #   without any host — that is how they are tested;
 # - orchestration helpers (probe, askPassword, launch, await, record,
-#   lendRound, printSuccess, printSummary) share the run state that
+#   lendRound, printSuccess, printSummary, onInterrupt) share the run state that
 #   __ak.sudo.many.run declares, through dynamic scope: tmpDir, mins, width,
 #   whenWidth, timeoutSec, connectSec, lendCmd, the colours, and the per-host
 #   associative arrays hostState / hostResult / hostRc / hostErr / hostNote.
@@ -20,10 +20,11 @@
 declare -r __AK_SUDO_MANY_CONNECT_TIMEOUT_DEFAULT=10   # ssh ConnectTimeout, s (as ak.sudo.remote-lend)
 declare -r __AK_SUDO_MANY_POLL_SEC=0.2                 # result polling step — zsh has no `wait -n`
 declare -r __AK_SUDO_MANY_DETAIL_LINES=5               # host output lines shown under a failure
+declare -r __AK_SUDO_MANY_WAIT_HINT_POLLS=25           # polls (x POLL_SEC = 5 s) before "still waiting for …"
 declare -r __AK_SUDO_MANY_RC_CANCELLED=130             # password prompt cancelled (Ctrl-C / empty)
 declare -r __AK_SUDO_MANY_NOISE_RE='no job control|cannot set terminal process group|^[[:space:]]*$'
 # shellcheck disable=SC2016  # expanded when the trap fires, not here
-declare -r __AK_SUDO_MANY_ON_INT='kill "${jobPids[@]}" 2> /dev/null; exit 130'
+declare -r __AK_SUDO_MANY_ON_INT='kill "${jobPids[@]}" 2> /dev/null; __ak.sudo.many.onInterrupt; exit 130'
 declare -r __AK_SUDO_SECONDS_PER_MINUTE=60
 
 # ── pure helpers ─────────────────────────────────────────────────────────────
@@ -225,7 +226,6 @@ function __ak.sudo.many.reason() {
   local -r rc="$3"
   local -r err="$4"
   local -r note="${5:-}"
-  local -r hostKeyRe='Host key verification failed|host key is known|REMOTE HOST IDENTIFICATION HAS CHANGED'
 
   case "${class}" in
     bad_password) printf 'password rejected' ;;
@@ -236,17 +236,9 @@ function __ak.sudo.many.reason() {
     outdated) printf 'ankor-shell outdated — run the fleet update first' ;;
     no_ak) printf 'ankor-shell not installed' ;;
     timeout) printf 'timed out — state UNKNOWN, check: ak.sudo.remote-status %s' "${host}" ;;
-    unreachable)
-      if [[ "${err}" =~ ${hostKeyRe} ]]; then
-        printf 'host key not in known_hosts — ssh %s once first' "${host}"
-      elif [[ "${err}" == *'Permission denied'* ]]; then
-        printf 'ssh auth failed (key not in the agent?)'
-      elif [[ "${rc}" == '124' ]]; then
-        printf 'unreachable (timeout)'
-      else
-        printf 'unreachable (ssh rc=%s)' "${rc}"
-      fi
-      ;;
+    interrupted) printf 'interrupted before its result — state UNKNOWN, check: ak.sudo.remote-status %s' "${host}" ;;
+    missing) printf 'no result recorded — state UNKNOWN, check: ak.sudo.remote-status %s' "${host}" ;;
+    unreachable) __ak.sudo.remote.sshFailReason "${rc}" "${err}" "${host}" ;;
     *) printf 'failed (rc=%s)' "${rc:-?}" ;;
   esac
 }
@@ -417,6 +409,7 @@ function __ak.sudo.many.await() {
   local -a pending=("$@")
   local -a still=()
   local host=''
+  local -i polls=0
 
   while (( ${#pending[@]} > 0 )); do
     still=()
@@ -428,7 +421,14 @@ function __ak.sudo.many.await() {
       fi
     done
     pending=("${still[@]}")
-    (( ${#pending[@]} > 0 )) && sleep "${__AK_SUDO_MANY_POLL_SEC}"
+    (( ${#pending[@]} > 0 )) || break
+    polls+=1
+    # A host stuck in DNS or connect holds the summary until its deadline —
+    # say so once, instead of a silent pause that invites a blind Ctrl-C.
+    (( polls == __AK_SUDO_MANY_WAIT_HINT_POLLS )) \
+      && printf '… still waiting for %s (deadline %ss; Ctrl-C prints the summary now)\n' \
+        "$(__ak.sudo.many.join "${pending[@]}")" "${timeoutSec}" >&2
+    sleep "${__AK_SUDO_MANY_POLL_SEC}"
   done
   wait
 }
@@ -509,26 +509,54 @@ function __ak.sudo.many.lendRound() {
   return 0
 }
 
-# Print the ✘ block (input order) and the summary line.
+##
+# Print the ✘ block (input order) and the summary line. Every host that has no
+# ✔ line gets a ✘ line here — a host without any recorded result included
+# (`missing`) — so the result lines always add up to the host count.
 # @param $@ hosts
-# @returns 0 all lent · 1 at least one failed
+# @output `N lent / U unreachable / S skipped / F failed (T hosts)`
+# @returns 0 all lent · 1 at least one host not lent
+##
 function __ak.sudo.many.printSummary() {
-  local -i nOk=0 nFail=0
+  local -i nOk=0 nUnreachable=0 nSkipped=0 nFail=0
   local host='' class='' details=''
   for host in "$@"; do
-    class="${hostResult[${host}]:-failed}"
+    class="${hostResult[${host}]:-missing}"
     if __ak.sudo.many.isSuccess "${class}"; then
       nOk+=1
       continue
     fi
-    nFail+=1
+    case "${class}" in
+      unreachable) nUnreachable+=1 ;;
+      skipped) nSkipped+=1 ;;
+      *) nFail+=1 ;;
+    esac
     printf '%s✘ %-*s  %s%s\n' "${cRed}" "${width}" "${host}" \
       "$(__ak.sudo.many.reason "${class}" "${host}" "${hostRc[${host}]:-}" "${hostErr[${host}]:-}" "${hostNote[${host}]:-}")" "${cNC}"
     details="$(__ak.sudo.many.formatDetails "${hostErr[${host}]:-}")"
     [[ -n "${details}" ]] && printf '%s\n' "${details}"
   done
-  printf '\n%d lent / %d failed\n' "${nOk}" "${nFail}"
-  (( nFail == 0 ))
+  printf '\n%d lent / %d unreachable / %d skipped / %d failed (%d hosts)\n' \
+    "${nOk}" "${nUnreachable}" "${nSkipped}" "${nFail}" "$#"
+  (( nUnreachable + nSkipped + nFail == 0 ))
+}
+
+# INT handler body (after the jobs are killed). Once a lend may have started,
+# a Ctrl-C still prints the summary: hosts without a result are listed as
+# `interrupted` (state unknown) instead of vanishing. Before that point no
+# host was changed, and it says so. Reads run's state through dynamic scope.
+function __ak.sudo.many.onInterrupt() {
+  if (( ! ${summaryArmed:-0} )); then
+    ak.sh.err 'ak.sudo.remote-lend-many: interrupted before any lend — no host was changed.'
+    return 0
+  fi
+  local host=''
+  for host in "${hosts[@]}"; do
+    [[ -n "${hostResult[${host}]:-}" ]] || hostResult[${host}]='interrupted'
+  done
+  printf '\n'
+  __ak.sudo.many.printSummary "${hosts[@]}"
+  return 0
 }
 
 # The whole run, inside the subshell that owns tmpDir and the traps.
@@ -543,6 +571,9 @@ function __ak.sudo.many.run() {
   local -A hostErr=()
   local -A hostNote=()
   local -A hostAuth=()
+  # 1 once a lend may have reached a host: from then on a Ctrl-C prints the
+  # summary (__ak.sudo.many.onInterrupt).
+  local -i summaryArmed=0
   local -r timeoutSec="${AK_SUDO_REMOTE_MANY_TIMEOUT:-${AK_SUDO_REMOTE_MANY_TIMEOUT_DEFAULT}}"
   local -r connectSec="${AK_SUDO_REMOTE_TIMEOUT:-${__AK_SUDO_MANY_CONNECT_TIMEOUT_DEFAULT}}"
   # The host's login shell moves ssh's stdin (the password pipe) to fd 3 and
@@ -569,8 +600,9 @@ function __ak.sudo.many.run() {
   # password typed ahead of the prompt must not land in the scrollback in
   # clear text. readSecret keeps the queued keystrokes. ttySaved belongs to
   # the enclosing subshell, whose EXIT trap restores it on every path.
-  if ttySaved="$(stty -g < /dev/tty 2> /dev/null)"; then
-    stty -echo < /dev/tty 2> /dev/null
+  # Braces: a failing /dev/tty redirection (no terminal) stays quiet in zsh too.
+  if ttySaved="$({ stty -g < /dev/tty; } 2> /dev/null)"; then
+    { stty -echo < /dev/tty; } 2> /dev/null
   fi
   __ak.sudo.many.probe "${hosts[@]}" || return 1
 
@@ -596,6 +628,7 @@ function __ak.sudo.many.run() {
     ak.sh.err "ak.sudo.remote-lend-many: cancelled — no host was changed."
     return "${askRc}"
   fi
+  summaryArmed=1
   (( ${#activeHosts[@]} > 0 )) && __ak.sudo.many.lendRound l1 0 "${pw}" "${activeHosts[@]}"
   unset pw
 
@@ -622,8 +655,12 @@ function __ak.sudo.many.run() {
 # Lend passwordless sudo on SEVERAL hosts with ONE password: asked once
 # (hidden, `*` per char, paste works) and only if a host needs it; checked on
 # ONE canary host first; then sent to the rest in parallel. ✔ lines stream in
-# as hosts answer, ✘ lines (with the host's last output lines) follow as a
-# block, then `N lent / M failed`.
+# as hosts answer, ✘ lines (with the host's last output lines and the reason —
+# DNS, refused, auth, timeout, no ankor-shell, password…) follow as a block,
+# then `N lent / U unreachable / S skipped / F failed (T hosts)`. Exactly one
+# result line per distinct host; a duplicate host is dropped with a warning.
+# A host still pending after 5 s is named on stderr; Ctrl-C after the lends
+# started prints the summary (pending hosts: `interrupted`, state unknown).
 #
 # Needs ankor-shell with `lend_api=1` (ak.sudo.lend --password-fd) on every
 # host — older hosts are reported as `outdated`, untouched. Host keys must

@@ -125,7 +125,8 @@ declare -r __AK_SUDO_REMOTE_HOST_RE='^[A-Za-z0-9._@-]+$'
 # all separate; empties are dropped, duplicates removed (first occurrence
 # wins). Refused: an all-digits word (a misplaced minutes argument), a leading
 # '-' (an ssh option) and any character outside [A-Za-z0-9._@-] — hosts go to
-# ssh after `--`, the check is still cheap.
+# ssh after `--`, the check is still cheap. Every dropped duplicate leaves a
+# warning on stderr: no host given by the operator may vanish silently.
 # @param $1 cmd   command name for the error messages
 # @param $2 hint  appended to the all-digits error (e.g. "minutes go FIRST…")
 # @param $@ words
@@ -151,10 +152,46 @@ function __ak.sudo.remote.parseHosts() {
       ak.sh.err "${cmd}: invalid host '${host}' — allowed: A-Z a-z 0-9 . _ @ - (not leading '-')."
       return 1
     fi
-    [[ "${seen}" == *" ${host} "* ]] && continue
+    if [[ "${seen}" == *" ${host} "* ]]; then
+      ak.sh.warn "${cmd}: duplicate host '${host}' ignored — it is handled once."
+      continue
+    fi
     seen+="${host} "
     printf '%s\n' "${host}"
   done < <(printf '%s\n' "$@" | tr ', \t' '\n\n\n' | tr '[:upper:]' '[:lower:]')
+}
+
+##
+# Echo the one-phrase reason why ssh could not run the command on a host. Pure.
+# ssh exits 255 for every connect-level failure, so the reason comes from its
+# stderr; rc 124 is the ak.sh.timeout deadline (DNS or connect hung).
+# @param $1 rc    ssh exit code (255 / 124)
+# @param $2 err   ssh stderr
+# @param $3 host  ssh destination, for the hint
+##
+function __ak.sudo.remote.sshFailReason() {
+  local -r rc="${1:-}"
+  local -r err="${2:-}"
+  local -r host="${3:-}"
+  local -r hostKeyRe='Host key verification failed|host key is known|REMOTE HOST IDENTIFICATION HAS CHANGED'
+
+  if [[ "${err}" == *'Could not resolve hostname'* ]]; then
+    printf 'hostname does not resolve (DNS) — check: ssh -G %s | grep ^hostname' "${host}"
+  elif [[ "${err}" =~ ${hostKeyRe} ]]; then
+    printf 'host key not in known_hosts — ssh %s once first' "${host}"
+  elif [[ "${err}" == *'Permission denied'* ]]; then
+    printf 'ssh auth failed (key not in the agent?)'
+  elif [[ "${err}" == *'Connection refused'* ]]; then
+    printf 'connection refused (sshd down or port closed)'
+  elif [[ "${err}" == *'No route to host'* || "${err}" == *'Network is unreachable'* ]]; then
+    printf 'no route to host'
+  elif [[ "${err}" == *'timed out'* ]]; then
+    printf 'unreachable (connect timed out)'
+  elif [[ "${rc}" == '124' ]]; then
+    printf 'unreachable (timeout — DNS or connect hung)'
+  else
+    printf 'unreachable (ssh rc=%s)' "${rc:-?}"
+  fi
 }
 
 # Drop every C0 control character except tab and newline (plus DEL) from
@@ -299,7 +336,8 @@ function ak.sudo.remote-status-all() {
       line="$(printf '%s\n' "${out}" | grep -E '^granted=[01]' | head -n 1)"
 
       if [[ "${rc}" == '124' || "${rc}" == '255' ]]; then
-        color="${cYellow}"; label='unreachable (timeout)'; nUnreachable+=1
+        color="${cYellow}"; nUnreachable+=1
+        label="$(__ak.sudo.remote.sshFailReason "${rc}" "$(cat "${tmpDir}/${i}.err" 2> /dev/null)" "${host}")"
       elif [[ "${rc}" == '127' ]]; then
         color="${cGray}"; label='ankor-shell not installed'; nNoAk+=1
       elif [[ "${line}" == granted=1* ]]; then
@@ -312,6 +350,10 @@ function ak.sudo.remote-status-all() {
         [[ -n "${left}" ]] && label="granted — ${left}"
       elif [[ "${line}" == granted=0* ]]; then
         color="${cRed}"; label='no grant'; nNoGrant+=1
+      elif [[ -z "${rc}" ]]; then
+        # The job left no exit code (killed before it wrote one): the host is
+        # still listed — never dropped from the report.
+        color="${cYellow}"; label='no result (poll job died) — state UNKNOWN'; nUnreachable+=1
       else
         # Reachable, ak.sudo.status exists, but no porcelain line: an old
         # ankor-shell that predates --porcelain — do NOT lie with "no grant".
@@ -349,6 +391,7 @@ function __ak.sudo.remote.revokeState() {
   local -r after="${3:-}"
 
   case "${rc}" in
+    '') printf 'failed\n'; return 0 ;;   # no exit code recorded — never "outdated"
     124) printf 'timeout\n'; return 0 ;;
     255) printf 'unreachable\n'; return 0 ;;
     127) printf 'no_ak\n'; return 0 ;;
@@ -432,12 +475,15 @@ function __ak.sudo.remote.revokeHosts() {
           [[ -n "${dl}" ]] && clock="$(__ak.sudo.epochClock "${dl}")" && label+=" (was until ${clock})"
           ;;
         none)        nNone+=1; mark='·'; color="${cGray}"; label='no grant' ;;
-        unreachable) nUnreachable+=1; mark='✘'; color="${cYellow}"; label="unreachable (ssh rc=${rc})" ;;
+        unreachable)
+          nUnreachable+=1; mark='✘'; color="${cYellow}"
+          label="$(__ak.sudo.remote.sshFailReason "${rc}" "$(cat "${tmpDir}/${i}.err" 2> /dev/null)" "${host}")"
+          ;;
         timeout)     nFailed+=1; mark='✘'; color="${cRed}"; label="timed out — state UNKNOWN, check: ak.sudo.remote-status ${host}" ;;
         no_ak)       nUnreachable+=1; mark='✘'; color="${cGray}"; label='ankor-shell not installed' ;;
         outdated)    nUnreachable+=1; mark='✘'; color="${cGray}"; label='ankor-shell outdated (no porcelain) — run the fleet update; check: ak.sudo.remote-status '"${host}" ;;
         still)       nFailed+=1; mark='✘'; color="${cRed}"; label='STILL GRANTED — revoke failed, check the host' ;;
-        *)           nFailed+=1; mark='✘'; color="${cRed}"; label="failed (rc=${rc:-?})" ;;
+        *)           nFailed+=1; mark='✘'; color="${cRed}"; label="failed (rc=${rc:-none recorded})" ;;
       esac
       printf '%s%s %-*s  %s%s\n' "${color}" "${mark}" "${width}" "${host}" "${label}" "${cNC}"
       # Failures: the host's last significant output lines, indented.
