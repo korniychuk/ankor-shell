@@ -74,6 +74,8 @@ created: 2026-09-26
 - Найдена старая утечка приватного суффикса и имён узлов в 00e/тесте — вычищена (`b49a796`), в истории остаётся; см. backlog 012.
 - Hardening `7880802` после раскатки `9695ad8` проверен вручную оператором (2026-09-26): эха пароля во время probe нет, неверный пароль → один `password rejected`, остальные `skipped`.
 
+**Доработка 2026-10-08 (задача `013`):** причина ✘ `unreachable` берётся из stderr ssh (`hostname does not resolve (DNS)`, refused, auth, …) — общий `__ak.sudo.remote.sshFailReason`, как в lend-many и `status-all`; отброшенный дубль хоста — предупреждение в stderr; хост без записанного кода возврата — `failed (rc=none recorded)`, а не `outdated`. Регрессионные тесты — `tests/sudo-remote.test.sh`.
+
 ## Проверка
 
 Статически: `bash -n`/`zsh -n`, source `index.sh` в обоих шеллах, shellcheck. Чистые функции: `classifyAuthError` на трёх формулировках; `parseHosts` (`a,b c`, `20 a` → ошибка, дубли, пусто → usage).

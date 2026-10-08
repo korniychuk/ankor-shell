@@ -29,7 +29,7 @@ Example manual checks:
 - Follow existing doc blocks (`##`, `@param`, `@example`) and match the surrounding file’s indentation (most files use 2 spaces in blocks).
 
 ## Testing Guidelines
-- No formal test framework is defined; verify behavior by sourcing and exercising functions or running example scripts.
+- No formal test framework; offline contract tests live in `tests/*.test.sh` (plain Bash, fake tools on PATH) — run each with `bash tests/<name>.test.sh`. Otherwise verify behavior by sourcing and exercising functions or running example scripts.
 - If you run ShellCheck, honor existing `# shellcheck` directives in files.
 
 ## Commit & Pull Request Guidelines
