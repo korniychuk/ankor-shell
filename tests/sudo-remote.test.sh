@@ -103,10 +103,41 @@ function runIn() {
 # Run <command> in a fresh <shell> that sources ONLY features/<file> (no
 # index.sh), stderr kept; prints its output then `rc=<exit code>`.
 function runStandalone() {
+  runSourced "$1" "$repo/features/$2" "$3"
+}
+
+# Run <command> in a fresh <shell> after `<prelude>; source <path> &&`,
+# from cwd $fixture/tmp (not the repo); prints its output then `rc=<exit code>`.
+function runSourced() {
   local -r sh=$1
-  local -r file=$2
+  local -r path=$2
   local -r command=$3
-  "$sh" -c "source '$repo/features/$file' && $command; echo \"rc=\$?\"" 2>&1
+  local -r prelude=${4:-:}
+  (cd "$fixture/tmp" && "$sh" -c "$prelude; source '$path' && $command; echo \"rc=\$?\"" 2>&1)
+}
+
+# Sourcing through file symlinks outside the repo: an absolute link, and a
+# relative link to that link (a chain).
+mkdir "$fixture/links" "$fixture/links2"
+for linked in sudo-remote.sh sudo-remote-many.sh; do
+  ln -s "$repo/features/$linked" "$fixture/links/$linked"
+  ln -s "../links/$linked" "$fixture/links2/$linked"
+done
+
+# A copy of the library without sdk/os.sh: a dependency that cannot load.
+mkdir "$fixture/no-os"
+cp -R "$repo/sdk" "$repo/features" "$fixture/no-os/"
+rm "$fixture/no-os/sdk/os.sh"
+
+# Source <path> under `set -e` in a fresh <shell>; prints LOADED when the
+# `source … &&` chain went on, `rc=<source rc>`, DEFINED:<fn> for every remote
+# function that exists afterwards, then `end`.
+function runRefused() {
+  local -r sh=$1
+  local -r path=$2
+  # shellcheck disable=SC2016  # expanded by the inner shell
+  local -r probe='for f in ak.sudo.remote-revoke-many ak.sudo.remote-status ak.sudo.remote-lend-many __ak.sudo.remote.pollAll; do typeset -f "$f" > /dev/null && echo "DEFINED:$f"; done; echo end'
+  (cd "$fixture/tmp" && "$sh" -c "set -e; source '$path' && echo LOADED; echo \"rc=\$?\"; $probe" 2>&1)
 }
 
 shells=(bash)
@@ -184,11 +215,45 @@ for shell in "${shells[@]}"; do
   out=$(runStandalone "$shell" sudo-remote-many.sh 'typeset -f ak.sudo.remote-lend-many ak.sudo.remote-status > /dev/null')
   check 'standalone lend-many file: loads clean' isExactly 'rc=0'
 
+  out=$(runStandalone "$shell" sudo-remote-many.sh 'typeset -f __ak.sudo.remote.resolveSelfDir > /dev/null || echo no-helper-left')
+  check 'standalone: path helper unset after load' hasLine '^no-helper-left$'
+
+  # P1-1: a file symlink outside the repo resolves to the repo, not to the link's dir.
+  out=$(runSourced "$shell" "$fixture/links2/sudo-remote.sh" 'ak.sudo.remote-revoke-many ok-a')
+  check 'symlinked sudo-remote.sh: loads and revokes' hasLine '^1 revoked / 0 no grant / 0 unreachable / 0 failed$'
+  out=$(runSourced "$shell" "$fixture/links2/sudo-remote-many.sh" 'typeset -f ak.sudo.remote-lend-many > /dev/null')
+  check 'symlinked sudo-remote-many.sh: loads clean' isExactly 'rc=0'
+
+  # P1-3: a dependency that fails to load → ERROR, rc 1, nothing defined, the
+  # `source … &&` chain stops even under `set -e`.
+  out=$(runRefused "$shell" "$fixture/no-os/features/sudo-remote.sh")
+  check 'no sdk/os.sh: sudo-remote.sh refuses' hasLine '^ERROR: features/sudo-remote.sh not loaded .*sdk/os.sh.*missing: ak.os.type.isLinux ak.os.type.isMacOS'
+  check 'no sdk/os.sh: sudo-remote.sh rc 1' hasLine '^rc=1$'
+  check 'no sdk/os.sh: sudo-remote.sh chain stopped' lacksLine '^LOADED$'
+  check 'no sdk/os.sh: sudo-remote.sh defines nothing' lacksLine '^DEFINED:'
+  check 'no sdk/os.sh: sudo-remote.sh shell survives' hasLine '^end$'
+  out=$(runRefused "$shell" "$fixture/no-os/features/sudo-remote-many.sh")
+  check 'no sdk/os.sh: sudo-remote-many.sh refuses' hasLine '^ERROR: features/sudo-remote.sh not loaded'
+  check 'no sdk/os.sh: sudo-remote-many.sh rc 1' hasLine '^rc=1$'
+  check 'no sdk/os.sh: sudo-remote-many.sh chain stopped' lacksLine '^LOADED$'
+  check 'no sdk/os.sh: sudo-remote-many.sh defines nothing' lacksLine '^DEFINED:'
+  check 'no sdk/os.sh: sudo-remote-many.sh shell survives' hasLine '^end$'
+
   # Full library: the guards find everything defined and source nothing twice
   # (a second `declare -r` would print "readonly variable").
   out=$("$shell" -c "source '$repo/index.sh' && typeset -f ak.sudo.remote-revoke-many > /dev/null; echo \"rc=\$?\"" 2>&1)
   check 'index.sh: loads clean' isExactly 'rc=0'
 done
+
+# P1-2: zsh without FUNCTION_ARGZERO — $0 is the shell name, not the sourced
+# file; discovery must not depend on it (cwd is $fixture/tmp, not the repo).
+if command -v zsh > /dev/null; then
+  shell=zsh
+  out=$(runSourced zsh "$repo/features/sudo-remote.sh" 'ak.sudo.remote-revoke-many ok-a' 'unsetopt FUNCTION_ARGZERO')
+  check 'zsh no FUNCTION_ARGZERO: sudo-remote.sh loads and revokes' hasLine '^1 revoked / 0 no grant / 0 unreachable / 0 failed$'
+  out=$(runSourced zsh "$fixture/links2/sudo-remote-many.sh" 'typeset -f ak.sudo.remote-lend-many > /dev/null' 'unsetopt FUNCTION_ARGZERO')
+  check 'zsh no FUNCTION_ARGZERO: symlinked sudo-remote-many.sh loads' isExactly 'rc=0'
+fi
 
 printf '%d passed, %d failed (%s)\n' "$passes" "$failures" "${shells[*]}"
 (( failures == 0 ))

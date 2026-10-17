@@ -14,39 +14,72 @@
 ##
 
 # ── dependencies (standalone sourcing) ───────────────────────────────────────
-# index.sh sources sdk/shell.sh (ak.sh.err/warn/timeout, AK_COLOR_*), sdk/os.sh,
+# index.sh sources sdk/shell.sh (ak.sh.*, AK_COLOR_*), sdk/os.sh (ak.os.type.*),
 # sdk/ssh.sh (ak.ssh.hosts) and features/sudo.sh before this file. A bare
 # `source features/sudo-remote.sh` had none of them: the parallel poll's local
 # `ak.sh.timeout` then exited 127 and every host was misreported as "ankor-shell
 # not installed" (2026-10-17). So each missing module is sourced here, at most
 # once (their `declare -r` lines cannot run twice) and at top level (`declare`
-# inside a function would make their constants local); nothing is defined when
-# a dependency is still missing. Under index.sh every probe hits and nothing
-# is sourced.
+# inside a function would make their constants local). Any failed load or any
+# helper still undefined → an ERROR, rc 1 and no remote function defined.
+# Under index.sh every probe hits and nothing is sourced.
+
+# Echo the physical directory of <file>, following file symlinks (a link to
+# this file placed outside the repo must still find the repo). Plain `readlink`
+# loop: macOS has no `readlink -f`. Kept identical in sudo-remote-many.sh.
+# @param $1 file  path of the sourced file
+# @returns 0 · 1 when a directory cannot be entered
+function __ak.sudo.remote.resolveSelfDir() {
+  local file="$1"
+  local dir='' link=''
+  while [[ -L "${file}" ]]; do
+    dir="$(cd -P "$(dirname "${file}")" && pwd)" || return 1
+    link="$(readlink "${file}")" || return 1
+    if [[ "${link}" == /* ]]; then file="${link}"; else file="${dir}/${link}"; fi
+  done
+  cd -P "$(dirname "${file}")" && pwd
+}
+
+__akSudoRemoteFailed=''
+__akSudoRemoteRoot=''
 for __akSudoRemoteDep in \
   'ak.sh.timeout:sdk/shell.sh' \
   'ak.os.type.isLinux:sdk/os.sh' \
   'ak.ssh.hosts:sdk/ssh.sh' \
   '__ak.sudo.validMinutes:features/sudo.sh'; do
   typeset -f "${__akSudoRemoteDep%%:*}" > /dev/null && continue
-  # zsh sets $0 to the sourced file, bash keeps it in BASH_SOURCE.
-  [[ -n "${__akSudoRemoteRoot:-}" ]] \
-    || __akSudoRemoteRoot="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)"
+  if [[ -z "${__akSudoRemoteRoot}" ]]; then
+    # %x = the file being sourced, independent of FUNCTION_ARGZERO; eval'd so
+    # bash never parses the zsh-only expansion.
+    if [[ -n "${ZSH_VERSION:-}" ]]; then
+      eval '__akSudoRemoteSelf="${(%):-%x}"'
+    else
+      __akSudoRemoteSelf="${BASH_SOURCE[0]}"
+    fi
+    if ! __akSudoRemoteRoot="$(__ak.sudo.remote.resolveSelfDir "${__akSudoRemoteSelf}")" \
+      || ! __akSudoRemoteRoot="$(cd -P "${__akSudoRemoteRoot}/.." && pwd)"; then
+      __akSudoRemoteFailed+=" (repo root of ${__akSudoRemoteSelf})"
+      break
+    fi
+  fi
   # shellcheck source=/dev/null  # the module list is data; index.sh is the static map
-  source "${__akSudoRemoteRoot}/${__akSudoRemoteDep#*:}"
+  source "${__akSudoRemoteRoot}/${__akSudoRemoteDep#*:}" \
+    || __akSudoRemoteFailed+=" ${__akSudoRemoteRoot}/${__akSudoRemoteDep#*:}"
 done
 __akSudoRemoteMissing=''
-for __akSudoRemoteDep in ak.sh.err ak.sh.warn ak.sh.timeout ak.ssh.hosts \
+for __akSudoRemoteDep in ak.sh.err ak.sh.warn ak.sh.ok ak.sh.timeout ak.sh.commandExists \
+  ak.os.type.isLinux ak.os.type.isMacOS ak.ssh.hosts \
   __ak.sudo.validMinutes __ak.sudo.formatRemaining __ak.sudo.epochClock; do
   typeset -f "${__akSudoRemoteDep}" > /dev/null || __akSudoRemoteMissing+=" ${__akSudoRemoteDep}"
 done
-if [[ -n "${__akSudoRemoteMissing}" ]]; then
-  printf 'ERROR: features/sudo-remote.sh not loaded — missing:%s (source index.sh of ankor-shell instead)\n' \
-    "${__akSudoRemoteMissing}" >&2
-  unset __akSudoRemoteDep __akSudoRemoteRoot __akSudoRemoteMissing
+unset -f __ak.sudo.remote.resolveSelfDir
+if [[ -n "${__akSudoRemoteFailed}${__akSudoRemoteMissing}" ]]; then
+  printf 'ERROR: features/sudo-remote.sh not loaded — failed to load:%s; missing:%s (source index.sh of ankor-shell instead)\n' \
+    "${__akSudoRemoteFailed:- none}" "${__akSudoRemoteMissing:- none}" >&2
+  unset __akSudoRemoteDep __akSudoRemoteRoot __akSudoRemoteSelf __akSudoRemoteFailed __akSudoRemoteMissing
   return 1
 fi
-unset __akSudoRemoteDep __akSudoRemoteRoot __akSudoRemoteMissing
+unset __akSudoRemoteDep __akSudoRemoteRoot __akSudoRemoteSelf __akSudoRemoteFailed __akSudoRemoteMissing
 
 # ── remote control (ak.sudo.* on another host over SSH) ──────────────────────
 

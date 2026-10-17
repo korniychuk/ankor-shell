@@ -21,12 +21,41 @@
 # loads sdk/shell.sh (ak.sh.readSecret, ak.sh.timeout) and features/sudo.sh in
 # turn; nothing is defined when it refuses to load.
 if ! typeset -f __ak.sudo.remote.pollAll > /dev/null; then
+  # Kept identical to the one in sudo-remote.sh (which unsets it after use):
+  # follows file symlinks, macOS has no `readlink -f`.
+  function __ak.sudo.remote.resolveSelfDir() {
+    local file="$1"
+    local dir='' link=''
+    while [[ -L "${file}" ]]; do
+      dir="$(cd -P "$(dirname "${file}")" && pwd)" || return 1
+      link="$(readlink "${file}")" || return 1
+      if [[ "${link}" == /* ]]; then file="${link}"; else file="${dir}/${link}"; fi
+    done
+    cd -P "$(dirname "${file}")" && pwd
+  }
+  # %x = the file being sourced, independent of FUNCTION_ARGZERO; eval'd so
+  # bash never parses the zsh-only expansion.
+  if [[ -n "${ZSH_VERSION:-}" ]]; then
+    eval '__akSudoManySelf="${(%):-%x}"'
+  else
+    __akSudoManySelf="${BASH_SOURCE[0]}"
+  fi
+  __akSudoManyDir="$(__ak.sudo.remote.resolveSelfDir "${__akSudoManySelf}")" || __akSudoManyDir=''
+  unset -f __ak.sudo.remote.resolveSelfDir
+  if [[ -z "${__akSudoManyDir}" ]]; then
+    printf 'ERROR: features/sudo-remote-many.sh not loaded — cannot resolve the directory of %s\n' "${__akSudoManySelf}" >&2
+    unset __akSudoManySelf __akSudoManyDir
+    return 1
+  fi
   # shellcheck source=/dev/null  # checked on its own; index.sh is the static map
-  source "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd -P)/sudo-remote.sh" \
-    || return 1
+  if ! source "${__akSudoManyDir}/sudo-remote.sh"; then
+    unset __akSudoManySelf __akSudoManyDir
+    return 1
+  fi
+  unset __akSudoManySelf __akSudoManyDir
 fi
-if ! typeset -f ak.sh.readSecret > /dev/null; then
-  printf 'ERROR: features/sudo-remote-many.sh not loaded — missing: ak.sh.readSecret (source index.sh of ankor-shell instead)\n' >&2
+if ! typeset -f ak.sh.readSecret > /dev/null || ! typeset -f __ak.sudo.remote.pollAll > /dev/null; then
+  printf 'ERROR: features/sudo-remote-many.sh not loaded — missing ak.sh.readSecret or __ak.sudo.remote.pollAll (source index.sh of ankor-shell instead)\n' >&2
   return 1
 fi
 
