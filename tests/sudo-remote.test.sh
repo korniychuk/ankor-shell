@@ -76,6 +76,8 @@ function check() {
 }
 
 function hasLine() { grep -qE -- "$1" <<< "$out"; }
+function lacksLine() { ! hasLine "$1"; }
+function isExactly() { [[ $out == "$1" ]]; }
 
 # One result line per host: `[✔✘·] <host>  …` (status-all has no mark).
 function hasOneLinePerHost() {
@@ -96,6 +98,15 @@ function runIn() {
   local -r sh=$1
   local -r command=$2
   "$sh" -c "trap : INT; source '$repo/index.sh' > /dev/null 2>&1; $command; echo \"rc=\$?\"" 2>&1
+}
+
+# Run <command> in a fresh <shell> that sources ONLY features/<file> (no
+# index.sh), stderr kept; prints its output then `rc=<exit code>`.
+function runStandalone() {
+  local -r sh=$1
+  local -r file=$2
+  local -r command=$3
+  "$sh" -c "source '$repo/features/$file' && $command; echo \"rc=\$?\"" 2>&1
 }
 
 shells=(bash)
@@ -158,6 +169,25 @@ for shell in "${shells[@]}"; do
   check 'status-all: hang reason' hasLine '^hang-d +unreachable \(timeout'
   check 'status-all: summary' hasLine '^0 granted / 1 no grant / 2 unreachable / 1 without ankor-shell$'
   check 'status-all: rc 0 (a report)' hasLine '^rc=0$'
+
+  # Standalone sourcing (the agent recipe `bash -c 'source features/sudo-remote.sh
+  # && ak.sudo.remote-revoke-many …'`): the file loads its own dependencies. The
+  # regression: a missing local ak.sh.timeout exited 127 → "ankor-shell not installed".
+  out=$(runStandalone "$shell" sudo-remote.sh 'ak.sudo.remote-revoke-many ok-a noak-b')
+  check 'standalone revoke-many: no missing helper' lacksLine 'command not found'
+  check 'standalone revoke-many: revoked' hasLine '^✔ ok-a +revoked'
+  check 'standalone revoke-many: summary' hasLine '^1 revoked / 0 no grant / 1 unreachable / 0 failed$'
+
+  out=$(runStandalone "$shell" sudo-remote.sh 'ak.sudo.remote-status-all')
+  check 'standalone status-all: summary' hasLine '^0 granted / 1 no grant / 2 unreachable / 1 without ankor-shell$'
+
+  out=$(runStandalone "$shell" sudo-remote-many.sh 'typeset -f ak.sudo.remote-lend-many ak.sudo.remote-status > /dev/null')
+  check 'standalone lend-many file: loads clean' isExactly 'rc=0'
+
+  # Full library: the guards find everything defined and source nothing twice
+  # (a second `declare -r` would print "readonly variable").
+  out=$("$shell" -c "source '$repo/index.sh' && typeset -f ak.sudo.remote-revoke-many > /dev/null; echo \"rc=\$?\"" 2>&1)
+  check 'index.sh: loads clean' isExactly 'rc=0'
 done
 
 printf '%d passed, %d failed (%s)\n' "$passes" "$failures" "${shells[*]}"

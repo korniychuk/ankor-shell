@@ -17,6 +17,19 @@
 #   associative arrays hostState / hostResult / hostRc / hostErr / hostNote.
 ##
 
+# Standalone sourcing (no index.sh): pull in features/sudo-remote.sh, which
+# loads sdk/shell.sh (ak.sh.readSecret, ak.sh.timeout) and features/sudo.sh in
+# turn; nothing is defined when it refuses to load.
+if ! typeset -f __ak.sudo.remote.pollAll > /dev/null; then
+  # shellcheck source=/dev/null  # checked on its own; index.sh is the static map
+  source "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd -P)/sudo-remote.sh" \
+    || return 1
+fi
+if ! typeset -f ak.sh.readSecret > /dev/null; then
+  printf 'ERROR: features/sudo-remote-many.sh not loaded — missing: ak.sh.readSecret (source index.sh of ankor-shell instead)\n' >&2
+  return 1
+fi
+
 declare -r __AK_SUDO_MANY_CONNECT_TIMEOUT_DEFAULT=10   # ssh ConnectTimeout, s (as ak.sudo.remote-lend)
 declare -r __AK_SUDO_MANY_POLL_SEC=0.2                 # result polling step — zsh has no `wait -n`
 declare -r __AK_SUDO_MANY_DETAIL_LINES=5               # host output lines shown under a failure

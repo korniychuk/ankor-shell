@@ -10,7 +10,7 @@ AnKor Shell is a modular Bash/Zsh utility library providing helper functions for
 
 The library is loaded by sourcing `index.sh` from `~/.bashrc` or `~/.zshrc`. It sequentially sources all modules from `sdk/`, then conditionally loads `sdk/macos.sh` on macOS. Additional entry points (`cals.sh`, `disk-aliases.sh`, `node-loader.sh`) are sourced separately by the user.
 
-There is no build step and no package manager. Tests are standalone Bash scripts: `bash tests/<name>.test.sh` (offline, fake tools on PATH; `tests/sudo-remote.test.sh` runs the parallel `ak.sudo.remote-*` commands in bash AND zsh). Lint: `shellcheck -x` (the `AK_COLOR_*` SC2154 warnings in `features/sudo-remote*.sh` are pre-existing — the colours live in `sdk/shell.sh`).
+There is no build step and no package manager. Tests are standalone Bash scripts: `bash tests/<name>.test.sh` (offline, fake tools on PATH; `tests/sudo-remote.test.sh` runs the parallel `ak.sudo.remote-*` commands in bash AND zsh, under `index.sh` and with standalone sourcing). Lint: `shellcheck -x` (the `AK_COLOR_*` SC2154 warnings in `features/sudo-remote*.sh` are pre-existing — the colours live in `sdk/shell.sh`).
 
 ## Architecture
 
@@ -35,7 +35,7 @@ There is no build step and no package manager. Tests are standalone Bash scripts
 | `sdk/downloader.sh` | `ak.downloader.*` | M3U8/HLS stream downloader (ffmpeg) |
 | `sdk/macos.sh` | (conditional) | macOS-specific functions, loaded only on macOS |
 | `features/sudo.sh` | `ak.sudo.*` | Time-boxed passwordless sudo: `lend` (incl. `--password-fd`), `revoke`, `status` (`--porcelain`), reboot-safe auto-revoke |
-| `features/sudo-remote.sh` | `ak.sudo.remote-*` | The same over SSH: `remote-lend/revoke/status`, parallel `remote-status-all`, `remote-revoke-many`, `remote-revoke-all` (shared `__ak.sudo.remote.pollAll`, host-list parser) |
+| `features/sudo-remote.sh` | `ak.sudo.remote-*` | The same over SSH: `remote-lend/revoke/status`, parallel `remote-status-all`, `remote-revoke-many`, `remote-revoke-all` (shared `__ak.sudo.remote.pollAll`, host-list parser). Standalone `source features/sudo-remote.sh` (no `index.sh`, the agent recipe) loads its missing deps (`sdk/shell.sh`, `sdk/os.sh`, `sdk/ssh.sh`, `features/sudo.sh`) once, or defines nothing and prints which are missing |
 | `features/sudo-remote-many.sh` | `ak.sudo.remote-lend-many` | One hidden password prompt → canary-checked parallel lend on many hosts; exactly one ✔/✘ line per distinct host (reason incl. DNS/refused/auth/timeout), summary `N lent / U unreachable / S skipped / F failed (T hosts)`, rc 1 on any miss, summary even on Ctrl-C |
 
 ### CaLS (Custom and Local Scripts)

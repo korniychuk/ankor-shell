@@ -8,7 +8,45 @@
 # __ak.sudo.formatRemaining, __ak.sudo.epochClock). The password-carrying
 # lend-many lives in features/sudo-remote-many.sh, on top of the parallel poll
 # and the host-list parser defined here.
+#
+# Standalone use: `source features/sudo-remote.sh` without index.sh (an agent's
+# `bash -c` one-liner) loads the modules this file calls — see below.
 ##
+
+# ── dependencies (standalone sourcing) ───────────────────────────────────────
+# index.sh sources sdk/shell.sh (ak.sh.err/warn/timeout, AK_COLOR_*), sdk/os.sh,
+# sdk/ssh.sh (ak.ssh.hosts) and features/sudo.sh before this file. A bare
+# `source features/sudo-remote.sh` had none of them: the parallel poll's local
+# `ak.sh.timeout` then exited 127 and every host was misreported as "ankor-shell
+# not installed" (2026-10-17). So each missing module is sourced here, at most
+# once (their `declare -r` lines cannot run twice) and at top level (`declare`
+# inside a function would make their constants local); nothing is defined when
+# a dependency is still missing. Under index.sh every probe hits and nothing
+# is sourced.
+for __akSudoRemoteDep in \
+  'ak.sh.timeout:sdk/shell.sh' \
+  'ak.os.type.isLinux:sdk/os.sh' \
+  'ak.ssh.hosts:sdk/ssh.sh' \
+  '__ak.sudo.validMinutes:features/sudo.sh'; do
+  typeset -f "${__akSudoRemoteDep%%:*}" > /dev/null && continue
+  # zsh sets $0 to the sourced file, bash keeps it in BASH_SOURCE.
+  [[ -n "${__akSudoRemoteRoot:-}" ]] \
+    || __akSudoRemoteRoot="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)"
+  # shellcheck source=/dev/null  # the module list is data; index.sh is the static map
+  source "${__akSudoRemoteRoot}/${__akSudoRemoteDep#*:}"
+done
+__akSudoRemoteMissing=''
+for __akSudoRemoteDep in ak.sh.err ak.sh.warn ak.sh.timeout ak.ssh.hosts \
+  __ak.sudo.validMinutes __ak.sudo.formatRemaining __ak.sudo.epochClock; do
+  typeset -f "${__akSudoRemoteDep}" > /dev/null || __akSudoRemoteMissing+=" ${__akSudoRemoteDep}"
+done
+if [[ -n "${__akSudoRemoteMissing}" ]]; then
+  printf 'ERROR: features/sudo-remote.sh not loaded — missing:%s (source index.sh of ankor-shell instead)\n' \
+    "${__akSudoRemoteMissing}" >&2
+  unset __akSudoRemoteDep __akSudoRemoteRoot __akSudoRemoteMissing
+  return 1
+fi
+unset __akSudoRemoteDep __akSudoRemoteRoot __akSudoRemoteMissing
 
 # ── remote control (ak.sudo.* on another host over SSH) ──────────────────────
 
